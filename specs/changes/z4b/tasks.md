@@ -2,7 +2,7 @@
 
 ## Phase 1: Bootstrap Skeleton
 
-Create the minimum viable startup chain: `.zshenv` → `z4b.zsh` → `.zshrc` → `z4b init` that gets you to a working prompt with starship.
+Create the minimum viable startup chain: `.zshenv` → `z4b.zsh` → `.zshrc` → `z4b init` that gets you to a basic prompt. Plugin install, ZLE, completions, and starship are stubs at this phase.
 
 - [ ] Create `z4b.zsh` — bootstrap loader that sets `WORDCHARS=''`, `KEYTIMEOUT=20`, essential options, validates `Z4B_ROOT`, provides recovery prompt on failure
 - [ ] Create `main.zsh` — `z4b init` function that loads zsh modules, sets up fpath/PATH (Homebrew detection), autoloading, and basic environment variables (LESS, PAGER, LS_COLORS, DIRSTACKSIZE, VIRTUAL_ENV_DISABLE_PROMPT, COLORTERM). Plugin install, ZLE, completions, and starship are stubbed as no-ops at this phase
