@@ -1,0 +1,25 @@
+FROM fedora:latest
+
+RUN dnf install -y zsh git curl fzf bat && dnf clean all
+
+# Install starship
+RUN curl -sS https://starship.rs/install.sh | sh -s -- -y -b /usr/local/bin
+
+# Copy z4b into place as the "installed" location
+ENV Z4B_ROOT=/root/.cache/zsh4bermudi
+COPY . /root/zsh4bermudi/
+RUN mkdir -p "$Z4B_ROOT" && cp -r /root/zsh4bermudi/* "$Z4B_ROOT/"
+
+# Write .zshenv
+RUN printf 'export Z4B_ROOT="${Z4B_ROOT:-$HOME/.cache/zsh4bermudi}"\n[[ -f "$Z4B_ROOT/z4b.zsh" ]] && source "$Z4B_ROOT/z4b.zsh"\n' > /root/.zshenv
+
+# Write .zshrc
+RUN printf 'z4b init || return\n' > /root/.zshrc
+
+# Smoke test: bootstrap sourcing
+RUN zsh -c 'source /root/.zshenv && echo "BOOTSTRAP_OK" && echo "WORDCHARS=$WORDCHARS" && echo "KEYTIMEOUT=$KEYTIMEOUT"'
+
+# Smoke test: full init
+RUN zsh -c 'source /root/.zshenv && source /root/.zshrc && echo "INIT_OK"'
+
+CMD ["zsh"]
