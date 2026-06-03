@@ -1,0 +1,78 @@
+#!/usr/bin/env zunit
+
+@test '-z4b-is-valid-list: simple valid command' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+
+  autoload -Uz -- -z4b-is-valid-list
+
+  run -z4b-is-valid-list 'echo hello'
+  assert $state equals 0
+}
+
+@test '-z4b-is-valid-list: incomplete if statement' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+
+  autoload -Uz -- -z4b-is-valid-list
+
+  run -z4b-is-valid-list 'if true; then'
+  assert $state not_equal_to 0
+}
+
+@test '-z4b-is-valid-list: multi-line valid command' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+
+  autoload -Uz -- -z4b-is-valid-list
+
+  run -z4b-is-valid-list $'if true; then\n  echo yes\nfi'
+  assert $state equals 0
+}
+
+@test '-z4b-is-valid-list: empty buffer is valid' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+
+  autoload -Uz -- -z4b-is-valid-list
+
+  run -z4b-is-valid-list ''
+  assert $state equals 0
+}
+
+@test '-z4b-is-valid-list: unclosed quote' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+
+  autoload -Uz -- -z4b-is-valid-list
+
+  run -z4b-is-valid-list 'echo "hello'
+  assert $state not_equal_to 0
+}
+
+@test '-z4b-is-valid-list: pipe without right side' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+
+  autoload -Uz -- -z4b-is-valid-list
+
+  run -z4b-is-valid-list 'echo hello |'
+  assert $state not_equal_to 0
+}
+
+@test '-z4b-is-valid-list: valid pipeline' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+
+  autoload -Uz -- -z4b-is-valid-list
+
+  run -z4b-is-valid-list 'echo hello | cat'
+  assert $state equals 0
+}

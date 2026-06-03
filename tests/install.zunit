@@ -1,0 +1,51 @@
+#!/usr/bin/env zunit
+
+@test 'z4b install clones a plugin from GitHub' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+
+  # Use a small, stable repo
+  run z4b install zsh-users/zsh-syntax-highlighting
+
+  assert $state equals 0
+  assert "$output" contains 'installed successfully'
+}
+
+@test 'Installed plugin directory exists' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+
+  z4b install zsh-users/zsh-syntax-highlighting
+
+  [[ -d "$Z4B_ROOT/zsh-users/zsh-syntax-highlighting" ]]
+  assert $state equals 0
+}
+
+@test 'z4b install on already-installed plugin updates' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+
+  z4b install zsh-users/zsh-syntax-highlighting
+
+  run z4b install zsh-users/zsh-syntax-highlighting
+
+  assert $state equals 0
+  assert "$output" contains 'already installed'
+}
+
+@test 'z4b update updates installed plugins' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+
+  z4b install zsh-users/zsh-syntax-highlighting
+
+  run z4b update
+
+  assert $state equals 0
+  assert "$output" contains 'zsh-users/zsh-syntax-highlighting'
+  assert "$output" contains 'update complete'
+}

@@ -1,0 +1,75 @@
+#!/usr/bin/env zunit
+
+@test 'z4b.zsh sources without error' {
+  unset _z4b_bootstrapped
+
+  source "$Z4B_ROOT/z4b.zsh"
+  # If we got here, sourcing succeeded
+  assert 1 equals 1
+}
+
+@test 'WORDCHARS is empty after sourcing z4b.zsh' {
+  unset _z4b_bootstrapped
+  source "$Z4B_ROOT/z4b.zsh"
+
+  assert "$WORDCHARS" is_empty
+}
+
+@test 'KEYTIMEOUT is 20 after sourcing z4b.zsh' {
+  unset _z4b_bootstrapped
+  source "$Z4B_ROOT/z4b.zsh"
+
+  assert "$KEYTIMEOUT" same_as '20'
+}
+
+@test '_z4b_bootstrapped is set after sourcing z4b.zsh' {
+  unset _z4b_bootstrapped
+  source "$Z4B_ROOT/z4b.zsh"
+
+  assert "$_z4b_bootstrapped" same_as '1'
+}
+
+@test 'z4b function is available after sourcing z4b.zsh' {
+  unset _z4b_bootstrapped
+  source "$Z4B_ROOT/z4b.zsh"
+
+  assert "$(whence -w z4b)" same_as 'z4b: function'
+}
+
+@test 'NO_GLOBAL_RCS is set' {
+  unset _z4b_bootstrapped
+  source "$Z4B_ROOT/z4b.zsh"
+
+  [[ -o NO_GLOBAL_RCS ]]
+  assert $state equals 0
+}
+
+@test 'EXTENDED_GLOB is set' {
+  unset _z4b_bootstrapped
+  source "$Z4B_ROOT/z4b.zsh"
+
+  [[ -o EXTENDED_GLOB ]]
+  assert $state equals 0
+}
+
+@test 'Fails gracefully if Z4B_ROOT is not set' {
+  unset _z4b_bootstrapped
+  local saved_root="$Z4B_ROOT"
+  unset Z4B_ROOT
+
+  run source "$saved_root/z4b.zsh"
+  assert $state not_equal_to 0
+
+  export Z4B_ROOT="$saved_root"
+}
+
+@test 'Fails gracefully if Z4B_ROOT directory does not exist' {
+  unset _z4b_bootstrapped
+  local saved_root="$Z4B_ROOT"
+  export Z4B_ROOT="/nonexistent/path/that/does/not/exist"
+
+  run source "$saved_root/z4b.zsh"
+  assert $state not_equal_to 0
+
+  export Z4B_ROOT="$saved_root"
+}

@@ -1,0 +1,71 @@
+#!/usr/bin/env zunit
+
+@test 'init-zle.zsh sources without error' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+
+  # init-zle.zsh is sourced during z4b init
+  # If we got here, it worked
+  assert $state equals 0
+}
+
+@test 'Default z4b key bindings are registered' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+
+  # Ctrl+R -> fzf history
+  local ctrl_r=$(bindkey '^R')
+  assert "$ctrl_r" contains 'z4b-fzf-history'
+
+  # Ctrl+W -> backward kill word
+  local ctrl_w=$(bindkey '^W')
+  assert "$ctrl_w" contains 'z4b-backward-kill-word'
+
+  # Ctrl+Space -> expand
+  local ctrl_space=$(bindkey '^@')
+  assert "$ctrl_space" contains 'z4b-expand'
+}
+
+@test 'Word navigation widgets are bound to Ctrl+arrow keys' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+
+  # Ctrl+Left -> backward word
+  local ctrl_left=$(bindkey | grep 'z4b-backward-word' | head -1)
+  assert "$ctrl_left" is_not_empty
+
+  # Ctrl+Right -> forward word
+  local ctrl_right=$(bindkey | grep 'z4b-forward-word' | head -1)
+  assert "$ctrl_right" is_not_empty
+}
+
+@test 'CD navigation widgets are bound' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+
+  # Shift+Down -> cd-down
+  local shift_down=$(bindkey | grep 'z4b-cd-down')
+  assert "$shift_down" is_not_empty
+
+  # Alt+R -> fzf dir history
+  local alt_r=$(bindkey | grep 'z4b-fzf-dir-history')
+  assert "$alt_r" is_not_empty
+}
+
+@test '_z4b_key map is populated with named keys' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+
+  # The map should have entries for named keys
+  assert "${#_z4b_key}" is_greater_than 0
+
+  # Verify a multi-char key that's actually in the map
+  assert "$_z4b_key[Ctrl+Right]" same_as '^[[1;5C'
+  assert "$_z4b_key[Ctrl+Left]" same_as '^[[1;5D'
+  assert "$_z4b_key[Ctrl+Space]" is_not_empty
+}

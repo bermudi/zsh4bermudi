@@ -1,0 +1,6 @@
+#!/usr/bin/env zsh
+# Bootstrap for zunit tests
+# Sourced before all tests to set up the environment
+
+# Point Z4B_ROOT at the project root (where we're testing from)
+export Z4B_ROOT="${ZUNIT_TEST_ROOT:-${0:A:h:h:h}}"

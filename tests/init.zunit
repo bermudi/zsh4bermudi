@@ -1,0 +1,124 @@
+#!/usr/bin/env zunit
+
+@test 'z4b init completes without error' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+
+  run z4b init
+
+  assert $state equals 0
+}
+
+@test '_z4b_initialized is set after z4b init' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+
+  assert "$_z4b_initialized" same_as '1'
+}
+
+@test 'fn/ is in fpath after z4b init' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+
+  local found=0
+  local p
+  for p in $fpath; do
+    if [[ "$p" == "$Z4B_ROOT/fn" ]]; then
+      found=1
+      break
+    fi
+  done
+
+  assert $found equals 1
+}
+
+@test 'All public ZLE widgets are autoloaded after z4b init' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+
+  local -a expected=(
+    z4b-forward-word
+    z4b-backward-word
+    z4b-forward-zword
+    z4b-backward-zword
+    z4b-accept-line
+    z4b-expand
+    z4b-stash-buffer
+    z4b-kill-word
+    z4b-backward-kill-word
+    z4b-fzf-history
+    z4b-fzf-dir-history
+    z4b-fzf-complete
+    z4b-cd-down
+    z4b-cd-back
+    z4b-cd-forward
+    z4b-cd-up
+  )
+
+  for w in $expected; do
+    assert "$(whence -w "$w" 2>/dev/null)" same_as "${w}: function"
+  done
+}
+
+@test 'Environment variables are set after z4b init' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+
+  assert "$LESS" contains '-iRFXMx4'
+  assert "$PAGER" same_as 'less'
+  assert "$DIRSTACKSIZE" same_as '10000'
+  assert "$VIRTUAL_ENV_DISABLE_PROMPT" same_as '1'
+  assert "$COLORTERM" same_as 'truecolor'
+}
+
+@test 'Essential zsh modules are loaded after z4b init' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+
+  # These should not error if modules are loaded
+  zmodload zsh/datetime 2>/dev/null
+  assert $state equals 0
+  zmodload zsh/system 2>/dev/null
+  assert $state equals 0
+  zmodload zsh/terminfo 2>/dev/null
+  assert $state equals 0
+  zmodload zsh/zutil 2>/dev/null
+  assert $state equals 0
+}
+
+@test 'LS_COLORS is set with expected entries' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+
+  assert "$LS_COLORS" is_not_empty
+  assert "$LS_COLORS" contains 'di='
+  assert "$LS_COLORS" contains 'ex='
+}
+
+@test 'ZLE hook functions are available in fpath' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+
+  # Hook functions are autoloaded on demand from fn/
+  # Verify the files exist in the fpath directory
+  [[ -f "$Z4B_ROOT/fn/-z4b-zle-line-init" ]]
+  assert $state equals 0
+
+  [[ -f "$Z4B_ROOT/fn/-z4b-zle-line-finish" ]]
+  assert $state equals 0
+
+  [[ -f "$Z4B_ROOT/fn/-z4b-zle-line-pre-redraw" ]]
+  assert $state equals 0
+
+  # And they can be autoloaded
+  autoload -Uz -- -z4b-zle-line-init -z4b-zle-line-finish -z4b-zle-line-pre-redraw
+  whence -w -- -z4b-zle-line-init | grep -q function
+  assert $state equals 0
+}

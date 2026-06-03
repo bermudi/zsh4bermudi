@@ -1,0 +1,74 @@
+#!/usr/bin/env zunit
+
+@test 'z4b with no arguments prints usage and errors' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+
+  run z4b
+
+  assert $state not_equal_to 0
+  assert "$output" contains 'usage'
+}
+
+@test 'z4b with unknown command errors' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+
+  run z4b nonsense
+
+  assert $state not_equal_to 0
+  assert "$output" contains 'unknown command'
+}
+
+@test 'z4b install with no args prints usage' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+
+  run z4b install
+
+  assert $state not_equal_to 0
+  assert "$output" contains 'usage'
+}
+
+@test 'z4b bindkey with no args prints usage' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+
+  run z4b bindkey
+
+  assert $state not_equal_to 0
+  assert "$output" contains 'usage'
+}
+
+@test 'z4b bindkey with one arg prints usage' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+
+  run z4b bindkey some-widget
+
+  assert $state not_equal_to 0
+  assert "$output" contains 'usage'
+}
+
+@test 'z4b bindkey maps named keys to widgets' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+
+  # Ctrl+Space should map to ^@
+  z4b bindkey z4b-expand Ctrl+Space
+  local binding=$(bindkey | grep 'z4b-expand')
+
+  assert "$binding" contains 'z4b-expand'
+}
+
+@test 'z4b update runs without error' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+
+  run z4b update
+
+  assert $state equals 0
+  assert "$output" contains 'update complete'
+}
