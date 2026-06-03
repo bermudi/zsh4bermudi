@@ -157,8 +157,8 @@ setopt no_auto_menu
 
 ~/.zshenv              # minimal: sets Z4B_ROOT, sources z4b.zsh
 ~/.zshrc               # user config: z4b calls, aliases, functions
-~/.shrc                # shell-agnostic aliases/functions (sourced by z4b)
-~/.env.zsh             # zsh-specific env vars (sourced by z4b)
+~/.shrc                # shell-agnostic aliases/functions (sourced by user in .zshrc)
+~/.env.zsh             # zsh-specific env vars (sourced by user in .zshrc)
 ~/.config/starship.toml # prompt config
 ```
 

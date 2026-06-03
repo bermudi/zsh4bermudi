@@ -5,10 +5,10 @@
 Create the minimum viable startup chain: `.zshenv` → `z4b.zsh` → `.zshrc` → `z4b init` that gets you to a working prompt with starship.
 
 - [ ] Create `z4b.zsh` — bootstrap loader that sets `WORDCHARS=''`, `KEYTIMEOUT=20`, essential options, validates `Z4B_ROOT`, provides recovery prompt on failure
-- [ ] Create `main.zsh` — `z4b init` function that loads zsh modules, sets up fpath/PATH (Homebrew detection), autoloading, and basic environment variables (LESS, PAGER, LS_COLORS)
-- [ ] Create `setup.zsh` — installer script that clones repo to `~/.cache/zsh4bermudi/`, writes `~/.zshenv`, creates `~/.zshrc` from template
+- [ ] Create `main.zsh` — `z4b init` function that loads zsh modules, sets up fpath/PATH (Homebrew detection), autoloading, and basic environment variables (LESS, PAGER, LS_COLORS, DIRSTACKSIZE, VIRTUAL_ENV_DISABLE_PROMPT, COLORTERM). Plugin install, ZLE, completions, and starship are stubbed as no-ops at this phase
+- [ ] Create `setup.zsh` — installer script that clones repo to `~/.cache/zsh4bermudi/`, writes `~/.zshenv`, creates `~/.zshrc` from template. Checks for zsh, git, curl/wget with clear error messages
 - [ ] Create `.zshrc` template with `z4b init || return` and placeholder sections
-- [ ] Verify: `zsh -c 'source ~/.zshenv; source ~/.zshrc'` reaches a prompt without errors
+- [ ] Verify: `Z4B_ROOT` is set and `z4b.zsh` sources without error. `z4b init` reaches a basic prompt (starship stubbed) without errors
 
 ## Phase 2: Package Management
 
@@ -28,12 +28,14 @@ Port the two-flavor word navigation, kill-word, smart enter, and QoL widgets.
 - [ ] Create `fn/z4b-backward-word` — shell word backward (adapt from z4h's `fn/z4h-backward-word`)
 - [ ] Create `fn/z4b-forward-zword` — tokenizer word forward (adapt from z4h's `fn/z4h-forward-zword`)
 - [ ] Create `fn/z4b-backward-zword` — tokenizer word backward (adapt from z4h's `fn/z4h-backward-zword`)
-- [ ] Create `fn/-z4b-move-and-kill` — kill-word with ring accumulation (adapt from z4h)
+- [ ] Create `fn/-z4b-move-and-kill` — kill-word engine: move cursor via widget arg, extract killed text, accumulate in kill ring (adapt from z4h)
+- [ ] Create `fn/z4b-kill-word` — ZLE widget wrapper that calls `-z4b-move-and-kill z4b-forward-word`
+- [ ] Create `fn/z4b-backward-kill-word` — ZLE widget wrapper that calls `-z4b-move-and-kill z4b-backward-word`
 - [ ] Create `fn/z4b-accept-line` — smart enter (adapt from z4h)
 - [ ] Create `fn/-z4b-is-valid-list` — parse validation helper (adapt from z4h)
 - [ ] Create `fn/z4b-expand` — expand alias/glob/parameter
 - [ ] Create `fn/z4b-stash-buffer` — ephemeral history stash
-- [ ] Create helper functions: `-z4b-get-cursor-pos`, `-z4b-prompt-length`, `-z4b-redraw-buffer`, `-z4b-redraw-prompt`
+- [ ] Create helper functions: `-z4b-get-cursor-pos`, `-z4b-prompt-length`, `-z4b-redraw-buffer`, `-z4b-redraw-prompt`, `-z4b-string-diff` (diff two strings for completion prefix matching)
 - [ ] Verify: Ctrl+Left/Right jumps by shell words, Ctrl+Shift+Left/Right by tokenizer words, Ctrl+W accumulates kill ring, Enter inserts newline on parse error
 
 ## Phase 4: Key Normalization and Bindings
@@ -90,10 +92,10 @@ The most complex piece — intercept zsh's completion system to feed candidates 
 
 - [ ] Install starship binary during init if missing
 - [ ] Initialize starship as the last step of `z4b init` via `eval "$(starship init zsh)"`
-- [ ] Add terminal title hooks (preexec/precmd for command/cwd display)
+- [ ] Add terminal title hooks (preexec/precmd for command/cwd display, include `user@host` prefix when `SSH_CONNECTION` is set)
 - [ ] Add locale fix (detect non-UTF-8 and set `LC_ALL`)
 - [ ] Add auto-update check (28-day interval, prompt user)
-- [ ] Verify: starship prompt renders, terminal title updates, `z4b update` checks for updates
+- [ ] Verify: starship prompt renders, terminal title shows cwd when idle and command name when running, `z4b update` checks for updates
 
 ## Phase 10: Polish and Verification
 

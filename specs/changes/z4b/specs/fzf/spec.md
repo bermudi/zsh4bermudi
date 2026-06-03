@@ -28,7 +28,7 @@ The system SHALL provide a `z4b-fzf-complete` widget bound to Tab. On first pres
 
 #### Scenario: Multiple matches — common prefix
 - **WHEN** the user types `git che` and presses Tab, and both `checkout` and `cherry-pick` match
-- **THEN** the buffer is completed to `git che` (common prefix is `che`, already present), and a second Tab opens fzf with `checkout` and `cherry-pick`
+- **THEN** the buffer remains `git che` (common prefix already typed), and a second Tab opens fzf with `checkout` and `cherry-pick`
 
 #### Scenario: fzf selection
 - **WHEN** fzf opens with multiple completion candidates and the user selects one

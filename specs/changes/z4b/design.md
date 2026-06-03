@@ -89,11 +89,15 @@ z4b follows z4h's startup pattern with significant simplification:
 ### State Management
 
 Minimal global state, following z4h's convention with `z4b` prefix:
-- `Z4B_ROOT` — installation directory
-- `_z4b_zle` — whether ZLE is active (interactive shell)
-- `_z4b_exe` — path to zsh binary
-- `_z4b_key` — named key → escape sequence map (assoc array)
-- `_z4b_install_queue` — plugins queued for installation
+
+| Variable | Type | Shape | Purpose |
+|----------|------|-------|----------|
+| `Z4B_ROOT` | scalar string | `~/.cache/zsh4bermudi` | Installation directory |
+| `_z4b_zle` | integer | `0` or `1` | Whether ZLE is active (interactive shell) |
+| `_z4b_exe` | scalar string | `/usr/bin/zsh` | Absolute path to zsh binary |
+| `_z4b_key` | assoc array | `[Ctrl+Backspace]='^H'` | Named key → escape sequence map |
+| `_z4b_install_queue` | array | `('zsh-users/zsh-syntax-highlighting' ...)` | Plugins queued for installation |
+| `_z4b_use` | assoc array | `[fzf]=1 [starship]=1` | Which core features are enabled |
 
 No zstyle. Configuration is positional in `.zshrc`.
 

@@ -84,7 +84,7 @@ The system SHALL normalize keycodes from TTY, urxvt, and iTerm2 to xterm canonic
 
 ### Requirement: Named Key Abstraction
 
-The system SHALL provide a `z4b bindkey` command that accepts human-readable key names (e.g., `Ctrl+Backspace`, `Alt+Left`, `Shift+Tab`) and maps them to terminal escape sequences internally.
+The system SHALL provide a `z4b bindkey` command that accepts human-readable key names and maps them to terminal escape sequences internally. Key name grammar: one or more modifiers (`Ctrl`, `Alt`, `Shift`) joined with `+`, followed by `+` and a key name. Key names are: `Backspace`, `Delete`, `Insert`, `Home`, `End`, `PageUp`, `PageDown`, `Up`, `Down`, `Left`, `Right`, `Tab`, `Space`, `Enter`, `Escape`, `F1`–`F12`, or a single printable character. Modifiers can be combined (e.g., `Ctrl+Shift+Left`). Order does not matter (`Ctrl+Alt+Delete` equals `Alt+Ctrl+Delete`).
 
 #### Scenario: Bind custom key
 - **WHEN** the user writes `z4b bindkey z4b-backward-kill-word Ctrl+Backspace` in their `.zshrc`

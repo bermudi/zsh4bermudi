@@ -38,9 +38,17 @@ The system SHALL set the terminal title to show the running command during execu
 - **WHEN** the user executes `sleep 10`
 - **THEN** the terminal title shows `sleep 10`
 
+#### Scenario: Command running over SSH
+- **WHEN** `SSH_CONNECTION` is set and the user executes `sleep 10`
+- **THEN** the terminal title shows `user@host: sleep 10`
+
 #### Scenario: Idle prompt
 - **WHEN** no command is running
 - **THEN** the terminal title shows the current directory path
+
+#### Scenario: Idle prompt over SSH
+- **WHEN** `SSH_CONNECTION` is set and no command is running
+- **THEN** the terminal title shows `user@host: ~/current/path`
 
 ### Requirement: Default Environment Variables
 
@@ -49,6 +57,10 @@ The system SHALL set: `LESS='-iRFXMx4'`, `PAGER=less` (if less is installed), `L
 #### Scenario: Less configured
 - **WHEN** the user runs `less somefile`
 - **THEN** less uses case-insensitive search, color, exits if one page, keeps content on screen, shows more info, and uses 4-space tabs
+
+#### Scenario: Virtualenv prompt disabled
+- **WHEN** the user activates a Python virtualenv
+- **THEN** the prompt is not modified by the virtualenv (starship handles display instead)
 
 ### Requirement: UTF-8 Detection
 

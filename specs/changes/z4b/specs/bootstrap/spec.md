@@ -18,6 +18,14 @@ The system SHALL provide a zsh-based installation script that clones the z4b rep
 - **WHEN** zsh is not found on the system
 - **THEN** the installer prints an error message telling the user to install zsh and exits with code 1
 
+#### Scenario: Missing git
+- **WHEN** git is not found on the system
+- **THEN** the installer prints an error message telling the user to install git and exits with code 1
+
+#### Scenario: Missing curl and wget
+- **WHEN** neither curl nor wget is found on the system
+- **THEN** the installer prints an error message telling the user to install curl or wget and exits with code 1
+
 ### Requirement: Bootstrap Loader
 
 The `~/.zshenv` file SHALL set `Z4B_ROOT` and source `$Z4B_ROOT/z4b.zsh`. The bootstrap loader MUST set essential zsh options and provide a recovery prompt if the full init fails.

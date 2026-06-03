@@ -16,7 +16,7 @@ The system SHALL install and initialize starship as the default prompt. Starship
 
 ### Requirement: Starship Binary Management
 
-The system SHALL install the starship binary if not found. The binary MUST be available in PATH after init.
+The system SHALL install the starship binary if not found. The binary MUST be downloaded from `https://github.com/starship/starship/releases/latest/download/starship-x86_64-unknown-linux-gnu.tar.gz` (or the appropriate platform variant) and extracted to `$Z4B_ROOT/bin/`. On macOS ARM64, use `starship-aarch64-apple-darwin`. z4b always fetches the latest release (no version pinning).
 
 #### Scenario: Starship not installed
 - **WHEN** `z4b init` runs and starship is not in PATH
