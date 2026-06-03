@@ -1,0 +1,277 @@
+#!/usr/bin/env zunit
+
+# Widget behavior tests — exercise actual widget logic on synthetic buffer state.
+# Strategy: stub zle, set BUFFER/CURSOR manually, call widgets, assert resulting state.
+
+@setup {
+  # Smart zle stub — handles copy-region-as-kill for kill ring tests
+  zle() {
+    if [[ "$1" == ".copy-region-as-kill" ]]; then
+      shift 2
+      CUTBUFFER="$*"
+    fi
+  }
+
+  # Bootstrap z4b so functions are autoloadable
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+
+  # Explicitly autoload internal helpers (excluded from the init autoload loop)
+  autoload -Uz -- -z4b-move-and-kill -z4b-cd-rotate -z4b-is-valid-list
+
+  # Helper: set BUFFER and CURSOR, derive LBUFFER/RBUFFER
+  _set_buf() {
+    BUFFER="$1"
+    CURSOR="${2:-$#BUFFER}"
+    LBUFFER="${BUFFER[1,$CURSOR]}"
+    RBUFFER="${BUFFER[$((CURSOR+1)),-1]}"
+  }
+}
+
+# ── Word navigation ──────────────────────────────────────────────────────────
+
+@test 'z4b-forward-word: skips one shell word' {
+  _set_buf "hello cruel world" 0
+  z4b-forward-word
+  assert "$CURSOR" equals 5
+}
+
+@test 'z4b-forward-word: skips from middle of word' {
+  _set_buf "hello cruel world" 3
+  z4b-forward-word
+  assert "$CURSOR" equals 5
+}
+
+@test 'z4b-forward-word: skips across whitespace' {
+  _set_buf "hello cruel world" 5
+  z4b-forward-word
+  assert "$CURSOR" equals 11
+}
+
+@test 'z4b-forward-word: skips to end of buffer' {
+  _set_buf "hello" 0
+  z4b-forward-word
+  assert "$CURSOR" equals 5
+}
+
+@test 'z4b-forward-word: respects NUMERIC prefix' {
+  _set_buf "one two three four" 0
+  NUMERIC=2
+  z4b-forward-word
+  unset NUMERIC
+  assert "$CURSOR" equals 6
+}
+
+@test 'z4b-backward-word: skips one shell word backward' {
+  _set_buf "hello cruel world" 17
+  z4b-backward-word
+  assert "$CURSOR" equals 12
+}
+
+@test 'z4b-backward-word: skips from middle of word backward' {
+  _set_buf "hello cruel world" 14
+  z4b-backward-word
+  assert "$CURSOR" equals 12
+}
+
+@test 'z4b-backward-word: stops at beginning' {
+  _set_buf "hello" 3
+  z4b-backward-word
+  assert "$CURSOR" equals 0
+}
+
+@test 'z4b-backward-word: respects NUMERIC prefix' {
+  _set_buf "one two three four" 19
+  NUMERIC=2
+  z4b-backward-word
+  unset NUMERIC
+  assert "$CURSOR" equals 11
+}
+
+@test 'z4b-forward-word: handles punctuation' {
+  _set_buf "ls -la /tmp/file" 3
+  z4b-forward-word
+  assert "$CURSOR" equals 6
+}
+
+# ── Tokenizer word navigation ────────────────────────────────────────────────
+
+@test 'z4b-forward-zword: skips one token forward' {
+  _set_buf "echo hello | cat" 0
+  PREBUFFER=""
+  z4b-forward-zword
+  assert "$CURSOR" equals 4
+}
+
+@test 'z4b-forward-zword: skips past pipe operator' {
+  _set_buf "echo hello | cat" 10
+  PREBUFFER=""
+  z4b-forward-zword
+  assert "$CURSOR" equals 12
+}
+
+@test 'z4b-backward-zword: skips one token backward' {
+  _set_buf "echo hello | cat" 17
+  PREBUFFER=""
+  z4b-backward-zword
+  assert "$CURSOR" equals 13
+}
+
+@test 'z4b-backward-zword: skips past pipe operator backward' {
+  _set_buf "echo hello | cat" 12
+  PREBUFFER=""
+  z4b-backward-zword
+  assert "$CURSOR" equals 11
+}
+
+# ── Kill word / kill ring ────────────────────────────────────────────────────
+
+@test 'z4b-kill-word: kills forward word and updates BUFFER' {
+  _set_buf "hello cruel world" 0
+  CUTBUFFER=""
+  LASTWIDGET=""
+  -z4b-move-and-kill z4b-forward-word
+  # Kills "hello" (positions 1-5), leaves " cruel world"
+  assert "$BUFFER" same_as ' cruel world'
+  assert "$CUTBUFFER" same_as 'hello'
+}
+
+@test 'z4b-backward-kill-word: kills backward word and updates BUFFER' {
+  _set_buf "hello cruel world" 17
+  CUTBUFFER=""
+  LASTWIDGET=""
+  -z4b-move-and-kill z4b-backward-word
+  # Kills "world" (positions 13-17), leaves "hello cruel "
+  assert "$BUFFER" same_as 'hello cruel '
+  assert "$CUTBUFFER" same_as 'world'
+}
+
+@test 'kill ring accumulates on consecutive forward kills' {
+  _set_buf "one two three" 0
+  CUTBUFFER=""
+  LASTWIDGET=""
+  -z4b-move-and-kill z4b-forward-word
+  assert "$BUFFER" same_as ' two three'
+  assert "$CUTBUFFER" same_as 'one'
+
+  LASTWIDGET="-z4b-move-and-kill"
+  _set_buf "$BUFFER" 0
+  -z4b-move-and-kill z4b-forward-word
+  assert "$BUFFER" same_as ' three'
+  assert "$CUTBUFFER" same_as ' two'
+}
+
+@test 'backward kill ring accumulates from end' {
+  _set_buf "one two three" 13
+  CUTBUFFER=""
+  LASTWIDGET=""
+  -z4b-move-and-kill z4b-backward-word
+  assert "$BUFFER" same_as 'one two '
+  assert "$CUTBUFFER" same_as 'three'
+
+  LASTWIDGET="-z4b-move-and-kill"
+  _set_buf "$BUFFER" 8
+  -z4b-move-and-kill z4b-backward-word
+  assert "$BUFFER" same_as 'one '
+  assert "$CUTBUFFER" same_as 'two '
+}
+
+# ── Smart enter ──────────────────────────────────────────────────────────────
+
+@test 'z4b-accept-line: valid command calls zle accept-line' {
+  _set_buf "echo hello" 10
+  PREBUFFER=""
+  z4b-accept-line
+  assert $state equals 0
+}
+
+@test 'z4b-accept-line: incomplete command inserts newline' {
+  _set_buf "if true; then" 13
+  PREBUFFER=""
+  z4b-accept-line
+  assert "$LBUFFER" contains $'\n'
+}
+
+@test 'z4b-accept-line: unclosed quote inserts newline' {
+  _set_buf 'echo "hello' 12
+  PREBUFFER=""
+  z4b-accept-line
+  assert "$LBUFFER" contains $'\n'
+}
+
+# ── Stash buffer ─────────────────────────────────────────────────────────────
+
+@test 'z4b-stash-buffer: stashes buffer to history' {
+  _set_buf "echo temporary" 14
+  z4b-stash-buffer
+  assert "$BUFFER" same_as ''
+}
+
+@test 'z4b-stash-buffer: empty buffer is a no-op' {
+  _set_buf "" 0
+  z4b-stash-buffer
+  assert $state equals 0
+  assert "$BUFFER" same_as ''
+}
+
+# ── Directory navigation ─────────────────────────────────────────────────────
+
+@test 'z4b-cd-up: moves to parent directory' {
+  local orig_pwd="$PWD"
+  local tmpdir
+  tmpdir="$(mktemp -d)/child"
+  mkdir -p "$tmpdir"
+  builtin cd -q "$tmpdir"
+
+  z4b-cd-up
+  assert "$PWD" same_as "${tmpdir:h}"
+
+  builtin cd -q "$orig_pwd"
+  rm -rf "${tmpdir:h}"
+}
+
+@test 'z4b-cd-back: pops dirstack' {
+  local orig_pwd="$PWD"
+  local tmpdir
+  tmpdir="$(mktemp -d)"
+  dirstack=("$PWD")
+  builtin cd -q "$tmpdir"
+
+  z4b-cd-back
+  assert "$PWD" same_as "$orig_pwd"
+
+  builtin cd -q "$orig_pwd"
+  rm -rf "$tmpdir"
+}
+
+@test 'z4b-cd-forward: pops forward stack' {
+  local orig_pwd="$PWD"
+  local tmpdir
+  tmpdir="$(mktemp -d)"
+  _z4b_dirstack_forward=("$tmpdir")
+
+  z4b-cd-forward
+  assert "$PWD" same_as "$tmpdir"
+  assert "${#_z4b_dirstack_forward}" equals 0
+
+  builtin cd -q "$orig_pwd"
+  rm -rf "$tmpdir"
+}
+
+@test '-z4b-cd-rotate: rotates dirstack forward' {
+  local orig_pwd="$PWD"
+  local dir_a dir_b
+  dir_a="$(mktemp -d)"
+  dir_b="$(mktemp -d)"
+  # Forward rotation: (dir_a dir_b) -> (dir_b dir_a), then cd to dirstack[1]=dir_b
+  dirstack=("$dir_a" "$dir_b")
+
+  -z4b-cd-rotate 1
+  assert "$PWD" same_as "$dir_b"
+  assert "${dirstack[1]}" same_as "$dir_b"
+  assert "${dirstack[2]}" same_as "$dir_a"
+
+  builtin cd -q "$orig_pwd"
+  rm -rf "$dir_a" "$dir_b"
+}
