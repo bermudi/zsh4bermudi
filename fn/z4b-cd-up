@@ -1,0 +1,5 @@
+# z4b-cd-up - Go to parent directory
+# Adapted from z4h's z4h-cd-up
+
+cd -q .. || return 1
+zle reset-prompt

@@ -1,0 +1,11 @@
+# Installed plugins
+zsh-users/
+
+# zunit output
+tests/_output/
+
+# Cache
+cache/
+
+# Compiled zsh
+*.zwc

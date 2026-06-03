@@ -1,0 +1,9 @@
+#!/usr/bin/env zsh
+# fn/z4b-accept-line
+# Smart enter: inserts \n when accept-line would result in a parse error or PS2.
+
+if -z4b-is-valid-list "$PREBUFFER$BUFFER"; then
+  zle accept-line
+else
+  LBUFFER+=$'\n'
+fi

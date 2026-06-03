@@ -1,0 +1,12 @@
+# -z4b-zle-line-finish - ZLE line finish hook
+# Cleans up highlight regions and suggestion state after command execution
+
+# Clear suggestion and highlight state
+POSTDISPLAY=
+ZSH_HIGHLIGHT_REGIONS=()
+
+# Update directory history if cd was executed
+if [[ "$BUFFER" == cd\ * ]]; then
+  # This will be handled by -z4b-update-dir-history in Phase 6
+  :
+fi

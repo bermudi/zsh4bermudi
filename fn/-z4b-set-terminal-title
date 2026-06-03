@@ -1,0 +1,23 @@
+# -z4b-set-terminal-title - Set terminal title based on state
+# Adapted from z4h's terminal title hooks
+
+# $1 = type (precmd or preexec)
+# $2 = command (for preexec)
+
+local type="$1"
+local cmd="$2"
+
+# Check if we're in SSH session
+local host_prefix=""
+if [[ -n "$SSH_CONNECTION" ]]; then
+  host_prefix="${USER}@${HOST} "
+fi
+
+if [[ "$type" == "precmd" ]]; then
+  # Idle: show cwd
+  print -Pn "\e]0;${host_prefix}${PWD}\a"
+elif [[ "$type" == "preexec" ]]; then
+  # Running: show command name
+  local cmd_name="${cmd%% *}"
+  print -Pn "\e]0;${host_prefix}${cmd_name}\a"
+fi

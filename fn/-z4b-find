@@ -1,0 +1,15 @@
+# -z4b-find - Find files matching a pattern
+# Adapted from z4h's -z4h-find
+
+# $1 = directory to search
+# $2 = pattern to match (default: *)
+
+local dir=${1:-.}
+local pattern=${2:-'*'}
+
+# Use fd if available, otherwise fall back to find
+if command -v fd >/dev/null 2>&1; then
+  fd --type f --hidden --no-ignore --color=never "$pattern" "$dir" 2>/dev/null
+else
+  find "$dir" -type f -name "$pattern" 2>/dev/null
+fi

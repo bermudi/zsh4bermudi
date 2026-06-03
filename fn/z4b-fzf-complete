@@ -1,0 +1,20 @@
+# z4b-fzf-complete - Tab completion with fzf fallback
+# Adapted from z4h's z4h-fzf-complete, stripped screen save/restore
+
+# This is the main entry point for fzf completion
+# It sets up the shadowing of zsh's completion functions
+
+# Shadow compadd to capture candidates
+compadd() {
+  # In a full implementation, this would capture candidates
+  # For now, we'll fall back to standard completion
+  builtin compadd "$@"
+}
+
+# Shadow _main_complete to intercept completions
+_main_complete() {
+  -z4b-main-complete "$@"
+}
+
+# Trigger completion
+zle .complete-word

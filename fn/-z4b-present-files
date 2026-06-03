@@ -1,0 +1,16 @@
+# -z4b-present-files - Format files for fzf presentation
+# Adapted from z4h's -z4h-present-files
+
+# $@ = list of files
+
+local file
+for file in "$@"; do
+  # Remove leading ./ if present
+  file="${file#./}"
+  # Print with color codes if terminal supports it
+  if [[ -t 1 ]] && command -v dircolors >/dev/null 2>&1; then
+    ls --color=auto -d "$file" 2>/dev/null || echo "$file"
+  else
+    echo "$file"
+  fi
+done

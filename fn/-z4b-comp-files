@@ -1,0 +1,45 @@
+# -z4b-comp-files - File path completion with fzf
+# Adapted from z4h's -z4b-comp-files
+
+local current_word="${words[CURRENT]}"
+local search_dir="."
+local search_pattern="*"
+
+# Determine search directory and pattern from current word
+if [[ "$current_word" == */* ]]; then
+  search_dir="${current_word%/*}"
+  search_pattern="${current_word##*/}"
+  # Handle absolute paths
+  if [[ "$current_word" == /* ]]; then
+    search_dir="/$search_dir"
+  fi
+fi
+
+# Find matching files
+local -a files
+files=("${(@f)$(-z4b-find "$search_dir" "$search_pattern")}")
+
+if (( ${#files} == 0 )); then
+  return 1
+fi
+
+# Format for fzf
+local -a formatted_files
+formatted_files=("${(@f)$(-z4b-present-files "${files[@]}")}")
+
+local selected
+selected=$(print -l "${formatted_files[@]}" | fzf \
+  --height 40% \
+  --layout=reverse \
+  --border \
+  --prompt="File> " \
+  --query="${search_pattern}" \
+  --preview="ls -la {}" \
+  --preview-window=right:50%)
+
+if [[ -n "$selected" ]]; then
+  # Reconstruct the full path
+  local full_path="$search_dir/$selected"
+  full_path="${full_path//\/\//\/}" # Remove double slashes
+  -z4b-comp-insert-all "$full_path"
+fi

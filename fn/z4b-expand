@@ -1,0 +1,5 @@
+#!/usr/bin/env zsh
+# fn/z4b-expand
+# Expand alias/glob/parameter
+
+zle expand-or-complete

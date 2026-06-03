@@ -1,0 +1,8 @@
+# -z4b-read-dir-history - Read directory history from file
+# Adapted from z4h's -z4h-read-dir-history
+
+local dirhistory_file="${Z4B_ROOT:-~/.cache/zsh4bermudi}/cache/dirhistory"
+
+if [[ -f "$dirhistory_file" ]]; then
+  cat "$dirhistory_file"
+fi

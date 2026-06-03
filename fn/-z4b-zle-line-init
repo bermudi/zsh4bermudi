@@ -1,0 +1,11 @@
+# -z4b-zle-line-init - ZLE line initialization hook
+# Integrates highlight regions from syntax-highlighting, autosuggestions, and history-substring-search
+
+# Reset highlight regions for new line
+ZSH_HIGHLIGHT_REGIONS=()
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=244'
+
+# Trigger autosuggest fetch if enabled
+if (( ${+ZSH_AUTOSUGGEST_USE_ASYNC} )) || (( ! ${+ZSH_AUTOSUGGEST_FETCHING} )); then
+  zle -R
+fi

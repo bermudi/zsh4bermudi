@@ -1,0 +1,19 @@
+#!/usr/bin/env zsh
+# fn/-z4b-redraw-prompt
+
+{
+  # Stub: -z4b-cursor-hide
+  local f
+  for f in chpwd "${chpwd_functions[@]}" precmd "${(@)precmd_functions:#-z4b-direnv-hook}"; do
+    [[ "${+functions[$f]}" == 0 ]] || "$f" &>/dev/null || true
+  done
+  if (( _z4b_use[zsh-syntax-highlighting] )); then
+    typeset -g _ZSH_HIGHLIGHT_PRIOR_BUFFER=
+    typeset -gi _ZSH_HIGHLIGHT_PRIOR_CURSOR=0
+  fi
+  zle .reset-prompt
+  (( ${1:-0} )) || zle -R
+} always {
+  (( ${1:-0} )) || : # Stub: -z4b-cursor-show
+  # Stub: -z4b-update-dir-history
+}

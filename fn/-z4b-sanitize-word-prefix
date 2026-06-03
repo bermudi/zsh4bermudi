@@ -1,0 +1,12 @@
+# -z4b-sanitize-word-prefix - Clean up completion prefix
+# Adapted from z4h's -z4h-sanitize-word-prefix
+
+# $1 = prefix to sanitize
+local prefix="$1"
+
+# Remove quotes and escape characters that might interfere with fzf
+prefix="${prefix//\'/}"
+prefix="${prefix//\"/}"
+prefix="${prefix//\\/}"
+
+echo "$prefix"

@@ -1,0 +1,7 @@
+# -z4b-write-dir-history - Write directory history to file
+# Adapted from z4h's -z4h-write-dir-history
+
+local dirhistory_file="${Z4B_ROOT:-~/.cache/zsh4bermudi}/cache/dirhistory"
+
+mkdir -p "${dirhistory_file:h}"
+print -l "${dirhistory_array[@]}" > "$dirhistory_file"

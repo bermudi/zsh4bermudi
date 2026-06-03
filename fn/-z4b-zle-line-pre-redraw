@@ -1,0 +1,13 @@
+# -z4b-zle-line-pre-redraw - ZLE pre-redraw hook
+# Updates highlight regions before the line is redrawn
+
+# Ensure syntax highlighting is applied
+if (( ${+functions[zsh_highlight]} )); then
+  zsh_highlight
+fi
+
+# Ensure history substring search highlighting is applied
+if (( ${+functions[_zsh_highlight_widget_history-substring-search-up]} )); then
+  # History substring search handles its own highlighting
+  :
+fi

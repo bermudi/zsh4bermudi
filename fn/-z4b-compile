@@ -1,0 +1,12 @@
+# -z4b-compile - zcompile helper
+# Adapted from z4h's -z4h-compile
+
+# $1 = file to compile
+local file="$1"
+local zwc_file="${file}.zwc"
+
+# Check if compilation is needed (file is newer than .zwc or .zwc doesn't exist)
+if [[ ! -f "$zwc_file" ]] || [[ "$file" -nt "$zwc_file" ]]; then
+  # Compile the file
+  zcompile "$zwc_file" "$file" 2>/dev/null
+fi

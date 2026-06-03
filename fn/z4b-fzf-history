@@ -1,0 +1,33 @@
+# z4b-fzf-history - fzf history search with dedup and bat preview
+# Adapted from z4h's z4h-fzf-history, stripped screen save/restore
+
+# Deduplicate history, keeping the most recent occurrence
+local -a unique_history
+local -A seen
+local item
+
+# Read history in reverse to keep most recent first
+for item in "${(Oa)history[@]}"; do
+  if [[ -z "${seen[$item]}" ]]; then
+    seen[$item]=1
+    unique_history+=("$item")
+  fi
+done
+
+# Use fzf to select from unique history
+local selected
+selected=$(print -l "${unique_history[@]}" | fzf \
+  --height 40% \
+  --layout=reverse \
+  --border \
+  --prompt="History> " \
+  --preview="echo {} | bat --color=always --language=sh" \
+  --preview-window=right:50% \
+  --bind="ctrl-r:toggle-sort" \
+  --tac)
+
+if [[ -n "$selected" ]]; then
+  BUFFER="$selected"
+  CURSOR=${#BUFFER}
+  zle redisplay
+fi

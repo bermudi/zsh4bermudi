@@ -1,0 +1,17 @@
+# -z4b-update-dir-history - Update directory history after cd
+# Adapted from z4h's -z4h-update-dir-history
+
+# Add current directory to dirhistory if it's not already there
+local current_dir="$PWD"
+local -a dirhistory_array=("${(@f)$(cat "${Z4B_ROOT:-~/.cache/zsh4bermudi}/cache/dirhistory" 2>/dev/null)}")
+
+# Remove current dir if it exists, then add to front
+dirhistory_array=("${(@)dirhistory_array:#$current_dir}")
+dirhistory_array=("$current_dir" "${dirhistory_array[@]}")
+
+# Keep only last 1000 entries
+dirhistory_array=("${dirhistory_array[@]:0:1000}")
+
+# Write back to file
+mkdir -p "${Z4B_ROOT:-~/.cache/zsh4bermudi}/cache"
+print -l "${dirhistory_array[@]}" > "${Z4B_ROOT:-~/.cache/zsh4bermudi}/cache/dirhistory"

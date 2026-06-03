@@ -1,0 +1,32 @@
+# -z4b-autosuggest-fetch - Smart suggestion caching
+# Adapted from z4h's -z4h-autosuggest-fetch
+
+# Prevent multiple concurrent fetches
+if (( ${+ZSH_AUTOSUGGEST_FETCHING} )); then
+  return
+fi
+ZSH_AUTOSUGGEST_FETCHING=1
+
+# Use zsh-history-substring-search if available and enabled
+if (( ${+functions[zsh-history-substring-search-up]} )); then
+  # Let history-substring-search handle the suggestion
+  ZSH_AUTOSUGGEST_FETCHING=0
+  return
+fi
+
+# Fallback to standard history search
+local -a history_matches
+history_matches=(${(M)history:#${BUFFER}*})
+
+if (( ${#history_matches} > 0 )); then
+  # Find the most recent match that isn't exactly the current buffer
+  local match
+  for match in "${history_matches[@]}"; do
+    if [[ "$match" != "$BUFFER" ]]; then
+      POSTDISPLAY="${match#$BUFFER}"
+      break
+    fi
+  done
+fi
+
+ZSH_AUTOSUGGEST_FETCHING=0

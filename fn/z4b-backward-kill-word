@@ -1,0 +1,5 @@
+#!/usr/bin/env zsh
+# fn/z4b-backward-kill-word
+# ZLE widget wrapper that calls -z4b-move-and-kill z4b-backward-word
+
+-z4b-move-and-kill z4b-backward-word

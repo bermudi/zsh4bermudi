@@ -1,0 +1,19 @@
+#!/usr/bin/env zsh
+# fn/-z4b-install-many
+# Batch install from queue
+
+if (( ! $#_z4b_install_queue )); then
+  return 0
+fi
+
+local repo
+for repo in "${_z4b_install_queue[@]}"; do
+  if [[ -f "$Z4B_ROOT/fn/-z4b-install-one" ]]; then
+    source "$Z4B_ROOT/fn/-z4b-install-one" "$repo" || return 1
+  else
+    print -u2 "z4b: internal error: -z4b-install-one not found"
+    return 1
+  fi
+done
+
+unset _z4b_install_queue

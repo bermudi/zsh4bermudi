@@ -1,0 +1,24 @@
+# z4b-fzf-dir-history - fzf directory history
+# Adapted from z4h's z4h-fzf-dir-history, stripped screen save/restore
+
+local dirhistory
+dirhistory=$(-z4b-read-dir-history)
+
+if [[ -z "$dirhistory" ]]; then
+  zle -M "No directory history"
+  return 0
+fi
+
+local selected
+selected=$(print -l "${(f)dirhistory}" | fzf \
+  --height 40% \
+  --layout=reverse \
+  --border \
+  --prompt="Directory History> " \
+  --preview="ls -la {}" \
+  --preview-window=right:50%)
+
+if [[ -n "$selected" ]] && [[ -d "$selected" ]]; then
+  cd "$selected" || return 1
+  zle reset-prompt
+fi

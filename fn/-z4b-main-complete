@@ -1,0 +1,27 @@
+# -z4b-main-complete - Shadow _main_complete
+# Adapted from z4h's -z4h-main-complete
+
+# This function shadows zsh's _main_complete to intercept completions
+# and route them through fzf on the second tab press
+
+# Track tab presses for fzf fallback
+if [[ -z "$_z4b_tab_count" ]]; then
+  _z4b_tab_count=0
+fi
+
+(( _z4b_tab_count++ ))
+
+if (( _z4b_tab_count == 1 )); then
+  # First tab: standard completion (common prefix)
+  _main_complete "$@"
+else
+  # Second tab: fzf completion
+  _z4b_tab_count=0 # Reset for next time
+  
+  # Determine if we're completing files or words
+  if [[ "${words[CURRENT]}" == */* ]] || [[ -z "${words[CURRENT]}" ]]; then
+    -z4b-comp-files "$@"
+  else
+    -z4b-comp-words "$@"
+  fi
+fi

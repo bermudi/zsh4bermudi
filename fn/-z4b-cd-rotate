@@ -1,0 +1,23 @@
+# -z4b-cd-rotate - Rotate directory stack
+# Adapted from z4h's -z4h-cd-rotate
+
+# $1 = direction (1 for forward, -1 for backward)
+local direction=${1:-1}
+
+if (( ${#dirstack} == 0 )); then
+  zle -M "Directory stack is empty"
+  return 0
+fi
+
+if (( direction == 1 )); then
+  # Forward rotation
+  local first="${dirstack[1]}"
+  dirstack=("${dirstack[@]:1}" "$first")
+else
+  # Backward rotation
+  local last="${dirstack[-1]}"
+  dirstack=("$last" "${dirstack[@]:0:-1}")
+fi
+
+cd -q "${dirstack[1]}" || return 1
+zle reset-prompt

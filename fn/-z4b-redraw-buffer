@@ -1,0 +1,15 @@
+#!/usr/bin/env zsh
+# fn/-z4b-redraw-buffer
+
+if (( ${+_z4b_redraw_fd} )); then
+  zle -F "$_z4b_redraw_fd"
+  exec {_z4b_redraw_fd}>&-
+  unset _z4b_redraw_fd
+fi
+
+if [[ -v region_highlight &&
+      ( ${LASTWIDGET-} != accept-line || ${WIDGET-} != zle-line-pre-redraw ) ]]; then
+  # Stub: _zsh_highlight
+  # Stub: -z4b-autosuggest-fetch
+  :
+fi

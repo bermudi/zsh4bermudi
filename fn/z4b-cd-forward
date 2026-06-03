@@ -1,0 +1,13 @@
+# z4b-cd-forward - Go forward in directory stack
+# Adapted from z4h's z4h-cd-forward
+
+# This is a simplified version - zsh's dirstack doesn't natively support forward
+# We'll use a custom stack for this
+if (( ${+_z4b_dirstack_forward} )) && (( ${#_z4b_dirstack_forward} > 0 )); then
+  local next_dir="${_z4b_dirstack_forward[1]}"
+  _z4b_dirstack_forward=("${_z4b_dirstack_forward[@]:1}")
+  cd -q "$next_dir" || return 1
+  zle reset-prompt
+else
+  zle -M "No forward directory in stack"
+fi

@@ -1,0 +1,9 @@
+# z4b-cd-back - Go back in directory stack
+# Adapted from z4h's z4h-cd-back
+
+if (( ${#dirstack} > 0 )); then
+  cd -q "$dirstack[1]" || return 1
+  zle reset-prompt
+else
+  zle -M "No previous directory in stack"
+fi

@@ -1,0 +1,18 @@
+# zsh4bermudi configuration template
+
+# Initialize z4b (installs core plugins, sets up environment, ZLE, completion, starship)
+z4b init || return
+
+# Key bindings (examples)
+# z4b bindkey z4b-backward-kill-word  Ctrl+Backspace
+# z4b bindkey z4b-backward-kill-zword Ctrl+Alt+Backspace
+# z4b bindkey undo Ctrl+/ Shift+Tab
+# z4b bindkey redo Alt+/
+
+# User options
+# setopt glob_dots
+# setopt no_auto_menu
+
+# User environment and aliases
+# [ -f ~/.env.zsh ] && source ~/.env.zsh
+# [ -f ~/.shrc ] && source ~/.shrc

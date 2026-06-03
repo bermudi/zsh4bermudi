@@ -1,0 +1,27 @@
+# z4b-cd-down - fzf child directory navigation
+# Adapted from z4h's z4h-cd-down, stripped screen save/restore
+
+local current_dir="$PWD"
+local -a child_dirs
+
+# Find all child directories
+child_dirs=("${(@f)$(find "$current_dir" -mindepth 1 -maxdepth 3 -type d 2>/dev/null)}")
+
+if (( ${#child_dirs} == 0 )); then
+  zle -M "No child directories found"
+  return 0
+fi
+
+local selected
+selected=$(print -l "${child_dirs[@]}" | fzf \
+  --height 40% \
+  --layout=reverse \
+  --border \
+  --prompt="Child Directory> " \
+  --preview="ls -la {}" \
+  --preview-window=right:50%)
+
+if [[ -n "$selected" ]] && [[ -d "$selected" ]]; then
+  cd "$selected" || return 1
+  zle reset-prompt
+fi

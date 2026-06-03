@@ -1,0 +1,26 @@
+# -z4b-with-local-history - Toggle set-local-history
+# Adapted from z4h's -z4h-with-local-history
+
+# $1 = widget to execute
+# $2 = local history length (default: 1000)
+
+local widget=$1
+local local_history_len=${2:-1000}
+
+# Save current history settings
+local orig_histfile=$HISTFILE
+local orig_savehist=$SAVEHIST
+local orig_histsize=$HISTSIZE
+
+# Set up local history
+HISTFILE=
+SAVEHIST=$local_history_len
+HISTSIZE=$local_history_len
+
+# Execute the widget
+zle $widget
+
+# Restore original history settings
+HISTFILE=$orig_histfile
+SAVEHIST=$orig_savehist
+HISTSIZE=$orig_histsize

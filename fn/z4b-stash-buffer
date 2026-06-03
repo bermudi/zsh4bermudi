@@ -1,0 +1,7 @@
+#!/usr/bin/env zsh
+# fn/z4b-stash-buffer
+# Ephemeral history stash
+
+[[ -z $BUFFER ]] && return
+fc -R =(print -r -- ${BUFFER//$'\n'/$'\\\n'})
+BUFFER=

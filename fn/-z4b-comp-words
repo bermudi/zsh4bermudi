@@ -1,0 +1,27 @@
+# -z4b-comp-words - Non-file completion with fzf
+# Adapted from z4h's -z4b-comp-words
+
+# This is a simplified version that intercepts standard completions
+# In a full implementation, this would shadow compadd and capture all candidates
+
+local -a candidates
+# In a real implementation, this would capture candidates from zsh's completion system
+# For now, we'll use a placeholder that demonstrates the fzf integration
+
+candidates=("${(@f)$(compgen -W "${words[CURRENT]}" 2>/dev/null)}")
+
+if (( ${#candidates} == 0 )); then
+  return 1
+fi
+
+local selected
+selected=$(print -l "${candidates[@]}" | fzf \
+  --height 40% \
+  --layout=reverse \
+  --border \
+  --prompt="Completion> " \
+  --query="${words[CURRENT]}")
+
+if [[ -n "$selected" ]]; then
+  -z4b-comp-insert-all "$selected"
+fi
