@@ -1,0 +1,201 @@
+#!/usr/bin/env zunit
+
+# Tests for internal file-I/O functions:
+#   -z4b-read-dir-history
+#   -z4b-write-dir-history
+#   -z4b-update-dir-history
+
+@setup {
+  zle() { :; }
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+  autoload -Uz -- -z4b-read-dir-history -z4b-write-dir-history -z4b-update-dir-history
+}
+
+# ── -z4b-read-dir-history ────────────────────────────────────────────────────
+
+@test '-z4b-read-dir-history: outputs file contents when file exists' {
+  local saved_root="$Z4B_ROOT"
+  local tmpdir="$(mktemp -d)"
+  export Z4B_ROOT="$tmpdir"
+  mkdir -p "$tmpdir/cache"
+  print -l "/foo" "/bar" "/baz" > "$tmpdir/cache/dirhistory"
+
+  local -a lines=("${(@f)$(print -l "$(-z4b-read-dir-history)")}")
+  assert "${#lines}" equals 3
+  assert "${lines[1]}" same_as '/foo'
+  assert "${lines[2]}" same_as '/bar'
+  assert "${lines[3]}" same_as '/baz'
+
+  export Z4B_ROOT="$saved_root"
+  rm -rf "$tmpdir"
+}
+
+@test '-z4b-read-dir-history: no output when file does not exist' {
+  local saved_root="$Z4B_ROOT"
+  local tmpdir="$(mktemp -d)"
+  export Z4B_ROOT="$tmpdir"
+
+  local output="$(-z4b-read-dir-history)"
+  assert "$output" is_empty
+
+  export Z4B_ROOT="$saved_root"
+  rm -rf "$tmpdir"
+}
+
+@test '-z4b-read-dir-history: no output when cache dir does not exist' {
+  local saved_root="$Z4B_ROOT"
+  local tmpdir="$(mktemp -d)"
+  export Z4B_ROOT="$tmpdir"
+
+  local output="$(-z4b-read-dir-history)"
+  assert "$output" is_empty
+
+  export Z4B_ROOT="$saved_root"
+  rm -rf "$tmpdir"
+}
+
+# ── -z4b-write-dir-history ───────────────────────────────────────────────────
+
+@test '-z4b-write-dir-history: writes one entry per line' {
+  local saved_root="$Z4B_ROOT"
+  local tmpdir="$(mktemp -d)"
+  export Z4B_ROOT="$tmpdir"
+
+  dirhistory_array=("/alpha" "/beta" "/gamma")
+  -z4b-write-dir-history
+
+  local -a lines=("${(@f)$(<"$tmpdir/cache/dirhistory")}")
+  assert "${#lines}" equals 3
+  assert "${lines[1]}" same_as '/alpha'
+  assert "${lines[2]}" same_as '/beta'
+  assert "${lines[3]}" same_as '/gamma'
+
+  export Z4B_ROOT="$saved_root"
+  rm -rf "$tmpdir"
+}
+
+@test '-z4b-write-dir-history: creates parent dirs if needed' {
+  local saved_root="$Z4B_ROOT"
+  local tmpdir="$(mktemp -d)"
+  export Z4B_ROOT="$tmpdir"
+
+  dirhistory_array=("/hello")
+  -z4b-write-dir-history
+
+  [[ -f "$tmpdir/cache/dirhistory" ]]
+  assert $state equals 0
+  local content="$(<"$tmpdir/cache/dirhistory")"
+  assert "$content" same_as '/hello'
+
+  export Z4B_ROOT="$saved_root"
+  rm -rf "$tmpdir"
+}
+
+@test '-z4b-write-dir-history: empty array produces empty file' {
+  local saved_root="$Z4B_ROOT"
+  local tmpdir="$(mktemp -d)"
+  export Z4B_ROOT="$tmpdir"
+
+  dirhistory_array=()
+  -z4b-write-dir-history
+
+  local content="$(<"$tmpdir/cache/dirhistory")"
+  assert "$content" is_empty
+
+  export Z4B_ROOT="$saved_root"
+  rm -rf "$tmpdir"
+}
+
+# ── -z4b-update-dir-history ──────────────────────────────────────────────────
+
+@test '-z4b-update-dir-history: creates file with PWD when missing' {
+  local saved_root="$Z4B_ROOT"
+  local saved_pwd="$PWD"
+  local tmpdir="$(mktemp -d)"
+  local workdir="$(mktemp -d)"
+  export Z4B_ROOT="$tmpdir"
+  builtin cd -q "$workdir"
+
+  -z4b-update-dir-history
+
+  local content="$(<"$tmpdir/cache/dirhistory")"
+  assert "$content" same_as "$workdir"
+
+  builtin cd -q "$saved_pwd"
+  export Z4B_ROOT="$saved_root"
+  rm -rf "$tmpdir" "$workdir"
+}
+
+@test '-z4b-update-dir-history: deduplicates PWD' {
+  local saved_root="$Z4B_ROOT"
+  local saved_pwd="$PWD"
+  local tmpdir="$(mktemp -d)"
+  local workdir="$(mktemp -d)"
+  export Z4B_ROOT="$tmpdir"
+  mkdir -p "$tmpdir/cache"
+  print -l "$workdir" "/other" > "$tmpdir/cache/dirhistory"
+  builtin cd -q "$workdir"
+
+  -z4b-update-dir-history
+
+  local -a lines=("${(@f)$(<"$tmpdir/cache/dirhistory")}")
+  assert "${#lines}" equals 2
+  assert "${lines[1]}" same_as "$workdir"
+  assert "${lines[2]}" same_as '/other'
+
+  builtin cd -q "$saved_pwd"
+  export Z4B_ROOT="$saved_root"
+  rm -rf "$tmpdir" "$workdir"
+}
+
+@test '-z4b-update-dir-history: prepends PWD to front' {
+  local saved_root="$Z4B_ROOT"
+  local saved_pwd="$PWD"
+  local tmpdir="$(mktemp -d)"
+  local workdir="$(mktemp -d)"
+  export Z4B_ROOT="$tmpdir"
+  mkdir -p "$tmpdir/cache"
+  print -l "/alpha" "/beta" > "$tmpdir/cache/dirhistory"
+  builtin cd -q "$workdir"
+
+  -z4b-update-dir-history
+
+  local -a lines=("${(@f)$(<"$tmpdir/cache/dirhistory")}")
+  assert "${#lines}" equals 3
+  assert "${lines[1]}" same_as "$workdir"
+  assert "${lines[2]}" same_as '/alpha'
+  assert "${lines[3]}" same_as '/beta'
+
+  builtin cd -q "$saved_pwd"
+  export Z4B_ROOT="$saved_root"
+  rm -rf "$tmpdir" "$workdir"
+}
+
+@test '-z4b-update-dir-history: trims to 1000 entries' {
+  local saved_root="$Z4B_ROOT"
+  local saved_pwd="$PWD"
+  local tmpdir="$(mktemp -d)"
+  local workdir="$(mktemp -d)"
+  export Z4B_ROOT="$tmpdir"
+  mkdir -p "$tmpdir/cache"
+
+  # Write 1001 entries
+  local -a entries=()
+  for i in {1..1001}; do
+    entries+=("/dir/$i")
+  done
+  print -l "${entries[@]}" > "$tmpdir/cache/dirhistory"
+  builtin cd -q "$workdir"
+
+  -z4b-update-dir-history
+
+  local -a result=("${(@f)$(<"$tmpdir/cache/dirhistory")}")
+  assert "${#result}" equals 1000
+  assert "${result[1]}" same_as "$workdir"
+
+  builtin cd -q "$saved_pwd"
+  export Z4B_ROOT="$saved_root"
+  rm -rf "$tmpdir" "$workdir"
+}

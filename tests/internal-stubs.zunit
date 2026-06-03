@@ -1,0 +1,249 @@
+#!/usr/bin/env zunit
+
+@setup {
+  zle() { :; }
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+  autoload -Uz -- -z4b-autosuggest-fetch -z4b-comp-insert-all -z4b-install-many -z4b-set-terminal-title -z4b-with-local-history -z4b-zle-line-finish -z4b-zle-line-init -z4b-zle-line-pre-redraw -z4b-install-one
+
+  # Write a zsh-format history file and load it into $history association.
+  # In non-interactive zsh, print -s adds to fc -l but not to $history.
+  # fc -R from a real file does populate $history.
+  # Note: $history excludes the most recent event, so we always append
+  # a dummy sentinel entry to ensure all real entries are visible.
+  _load_history() {
+    local histfile=$(mktemp)
+    local ts=1717400000
+    local cmd
+    for cmd in "$@"; do
+      print -r ": $ts:0;$cmd" >> "$histfile"
+      ts=$((ts + 1))
+    done
+    # Sentinel — ensures the last real entry shows up in $history
+    print -r ": $ts:0;# z4b-sentinel" >> "$histfile"
+    HISTFILE="$histfile"
+    HISTSIZE=10000
+    SAVEHIST=10000
+    fc -R
+  }
+}
+
+# ── -z4b-autosuggest-fetch ──────────────────────────────────────────────────
+
+@test '-z4b-autosuggest-fetch: sets POSTDISPLAY to suffix of matching history entry' {
+  _load_history "echo hello world"
+  BUFFER="echo"
+  unset ZSH_AUTOSUGGEST_FETCHING
+  unset 'functions[zsh-history-substring-search-up]'
+  POSTDISPLAY=""
+  -z4b-autosuggest-fetch
+  assert "$POSTDISPLAY" same_as ' hello world'
+}
+
+@test '-z4b-autosuggest-fetch: early return if ZSH_AUTOSUGGEST_FETCHING is set' {
+  ZSH_AUTOSUGGEST_FETCHING=1
+  POSTDISPLAY="original"
+  BUFFER="echo"
+  -z4b-autosuggest-fetch
+  assert "$POSTDISPLAY" same_as 'original'
+}
+
+@test '-z4b-autosuggest-fetch: no match leaves POSTDISPLAY empty' {
+  _load_history "git status"
+  BUFFER="echo"
+  unset ZSH_AUTOSUGGEST_FETCHING
+  unset 'functions[zsh-history-substring-search-up]'
+  POSTDISPLAY=""
+  -z4b-autosuggest-fetch
+  assert "$POSTDISPLAY" same_as ''
+}
+
+@test '-z4b-autosuggest-fetch: exact match (buffer == full history line) is skipped' {
+  _load_history "echo hello"
+  BUFFER="echo hello"
+  unset ZSH_AUTOSUGGEST_FETCHING
+  unset 'functions[zsh-history-substring-search-up]'
+  POSTDISPLAY=""
+  -z4b-autosuggest-fetch
+  assert "$POSTDISPLAY" same_as ''
+}
+
+@test '-z4b-autosuggest-fetch: picks first non-exact match when multiple entries exist' {
+  _load_history "echo alpha" "echo beta"
+  BUFFER="echo"
+  unset ZSH_AUTOSUGGEST_FETCHING
+  unset 'functions[zsh-history-substring-search-up]'
+  POSTDISPLAY=""
+  -z4b-autosuggest-fetch
+  # $history assoc is most-recent-first; first matching entry is "echo beta"
+  assert "$POSTDISPLAY" is_not_empty
+  assert "$POSTDISPLAY" same_as ' beta'
+}
+
+# ── -z4b-comp-insert-all ────────────────────────────────────────────────────
+
+@test '-z4b-comp-insert-all: inserts result at word boundary with trailing space' {
+  # prefix="cd ", trailing space stripped → word_start=2, suffix=""
+  BUFFER="cd "
+  CURSOR=3
+  -z4b-comp-insert-all "src"
+  assert "$BUFFER" same_as 'cdsrc'
+  assert "$CURSOR" equals 5
+}
+
+@test '-z4b-comp-insert-all: appends result when no trailing space' {
+  # prefix="hello", no trailing space → word_start=5, suffix=""
+  BUFFER="hello"
+  CURSOR=5
+  -z4b-comp-insert-all "world"
+  assert "$BUFFER" same_as 'helloworld'
+  assert "$CURSOR" equals 10
+}
+
+@test '-z4b-comp-insert-all: preserves suffix after cursor position' {
+  # prefix="ls ol", no trailing space → word_start=4, suffix="d world"
+  # "ls old world" with CURSOR=5: prefix="ls ol", suffix="d world"
+  BUFFER="ls old world"
+  CURSOR=5
+  -z4b-comp-insert-all "new"
+  assert "$BUFFER" same_as 'ls nnewd world'
+  assert "$CURSOR" equals 7
+}
+
+# ── -z4b-install-many ───────────────────────────────────────────────────────
+
+@test '-z4b-install-many: empty queue returns 0' {
+  unset _z4b_install_queue
+  -z4b-install-many
+  assert $state equals 0
+}
+
+@test '-z4b-install-many: sources install-one for each queue entry' {
+  local -a _called_repos=()
+  source() {
+    if [[ "$1" == *"-z4b-install-one" ]]; then
+      _called_repos+=("$2")
+      return 0
+    fi
+    builtin source "$@"
+  }
+  _z4b_install_queue=("owner/repo1" "owner/repo2")
+  -z4b-install-many
+  assert "${#_called_repos}" equals 2
+  assert "${_called_repos[1]}" same_as "owner/repo1"
+  assert "${_called_repos[2]}" same_as "owner/repo2"
+}
+
+@test '-z4b-install-many: unsets queue after processing' {
+  source() {
+    if [[ "$1" == *"-z4b-install-one" ]]; then
+      return 0
+    fi
+    builtin source "$@"
+  }
+  _z4b_install_queue=("owner/repo1")
+  -z4b-install-many
+  assert "${+_z4b_install_queue}" equals 0
+}
+
+# ── -z4b-set-terminal-title ─────────────────────────────────────────────────
+
+@test '-z4b-set-terminal-title: precmd outputs OSC escape with cwd' {
+  unset SSH_CONNECTION
+  run -z4b-set-terminal-title precmd
+  assert "$output" contains $'\e]0;'
+  assert "$output" contains "$PWD"
+  assert "$output" contains $'\a'
+}
+
+@test '-z4b-set-terminal-title: preexec outputs OSC escape with command name' {
+  unset SSH_CONNECTION
+  run -z4b-set-terminal-title preexec "echo hello world"
+  assert "$output" same_as $'\e]0;echo\a'
+}
+
+@test '-z4b-set-terminal-title: precmd includes host prefix in SSH session' {
+  SSH_CONNECTION="1.2.3.4 5678 9.10.11.12 22"
+  run -z4b-set-terminal-title precmd
+  assert "$output" contains "${USER}@${HOST}"
+  assert "$output" contains "$PWD"
+  unset SSH_CONNECTION
+}
+
+@test '-z4b-set-terminal-title: preexec includes host prefix in SSH session' {
+  SSH_CONNECTION="1.2.3.4 5678 9.10.11.12 22"
+  run -z4b-set-terminal-title preexec "git commit -m fix"
+  assert "$output" contains "${USER}@${HOST}"
+  assert "$output" contains "git"
+  unset SSH_CONNECTION
+}
+
+# ── -z4b-with-local-history ─────────────────────────────────────────────────
+
+@test '-z4b-with-local-history: restores HISTFILE after widget executes' {
+  HISTFILE="/tmp/test_histfile_$$"
+  SAVEHIST=100
+  HISTSIZE=200
+
+  -z4b-with-local-history some-widget 500
+
+  assert "$HISTFILE" same_as "/tmp/test_histfile_$$"
+  assert "$SAVEHIST" same_as "100"
+  assert "$HISTSIZE" same_as "200"
+}
+
+@test '-z4b-with-local-history: defaults history length to 1000' {
+  HISTFILE="/tmp/test_histfile_$$"
+  SAVEHIST=50
+  HISTSIZE=50
+
+  -z4b-with-local-history some-widget
+
+  # After restoration, original values are back
+  assert "$SAVEHIST" same_as "50"
+  assert "$HISTSIZE" same_as "50"
+}
+
+# ── -z4b-zle-line-finish ────────────────────────────────────────────────────
+
+@test '-z4b-zle-line-finish: clears POSTDISPLAY' {
+  POSTDISPLAY=" some suggestion"
+  -z4b-zle-line-finish
+  assert "$POSTDISPLAY" same_as ''
+}
+
+@test '-z4b-zle-line-finish: clears ZSH_HIGHLIGHT_REGIONS' {
+  ZSH_HIGHLIGHT_REGIONS=("0 5 fg=red")
+  -z4b-zle-line-finish
+  assert "${#ZSH_HIGHLIGHT_REGIONS}" equals 0
+}
+
+# ── -z4b-zle-line-init ──────────────────────────────────────────────────────
+
+@test '-z4b-zle-line-init: clears ZSH_HIGHLIGHT_REGIONS' {
+  ZSH_HIGHLIGHT_REGIONS=("0 5 fg=red")
+  -z4b-zle-line-init
+  assert "${#ZSH_HIGHLIGHT_REGIONS}" equals 0
+}
+
+@test '-z4b-zle-line-init: sets ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE' {
+  unset ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE
+  -z4b-zle-line-init
+  assert "$ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE" same_as 'fg=244'
+}
+
+# ── -z4b-zle-line-pre-redraw ────────────────────────────────────────────────
+
+@test '-z4b-zle-line-pre-redraw: calls zsh_highlight when available' {
+  local _highlight_called=0
+  zsh_highlight() { _highlight_called=1; }
+  -z4b-zle-line-pre-redraw
+  assert "$_highlight_called" equals 1
+}
+
+@test '-z4b-zle-line-pre-redraw: no-op when zsh_highlight is unavailable' {
+  unset 'functions[zsh_highlight]'
+  -z4b-zle-line-pre-redraw
+  assert $state equals 0
+}

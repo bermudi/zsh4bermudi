@@ -1,0 +1,289 @@
+#!/usr/bin/env zunit
+
+# Tests for pure internal functions — no TTY or complex stubs needed.
+
+@setup {
+  zle() { :; }
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+  autoload -Uz -- -z4b-is-valid-list -z4b-sanitize-word-prefix -z4b-prompt-length -z4b-string-diff -z4b-compile -z4b-set-list-colors -z4b-find
+}
+
+# ── -z4b-is-valid-list ───────────────────────────────────────────────────────
+
+@test '-z4b-is-valid-list: "echo hello" is valid' {
+  run -z4b-is-valid-list 'echo hello'
+  assert $state equals 0
+}
+
+@test '-z4b-is-valid-list: "ls -la" is valid' {
+  run -z4b-is-valid-list 'ls -la'
+  assert $state equals 0
+}
+
+@test '-z4b-is-valid-list: for loop is valid' {
+  run -z4b-is-valid-list 'for x in 1 2 3; do echo $x; done'
+  assert $state equals 0
+}
+
+@test '-z4b-is-valid-list: "for x" is invalid (incomplete compound)' {
+  run -z4b-is-valid-list 'for x'
+  assert $state not_equal_to 0
+}
+
+@test '-z4b-is-valid-list: trailing backslash is invalid' {
+  run -z4b-is-valid-list 'echo \'
+  assert $state not_equal_to 0
+}
+
+@test '-z4b-is-valid-list: "if true" is invalid (incomplete compound)' {
+  run -z4b-is-valid-list 'if true'
+  assert $state not_equal_to 0
+}
+
+@test '-z4b-is-valid-list: empty string is valid' {
+  run -z4b-is-valid-list ''
+  assert $state equals 0
+}
+
+@test '-z4b-is-valid-list: multi-line heredoc is valid' {
+  run -z4b-is-valid-list $'cat <<EOF\nhello\nEOF'
+  assert $state equals 0
+}
+
+@test '-z4b-is-valid-list: double backslash is valid' {
+  run -z4b-is-valid-list 'echo \\\\'
+  assert $state equals 0
+}
+
+@test '-z4b-is-valid-list: unclosed quote is invalid' {
+  run -z4b-is-valid-list 'echo "hello'
+  assert $state not_equal_to 0
+}
+
+# ── -z4b-sanitize-word-prefix ────────────────────────────────────────────────
+
+@test '-z4b-sanitize-word-prefix: strips quotes and backslashes' {
+  run -z4b-sanitize-word-prefix 'he"l'\''lo\'
+  assert "$output" same_as 'hello'
+}
+
+@test '-z4b-sanitize-word-prefix: passes normal text unchanged' {
+  run -z4b-sanitize-word-prefix 'normal'
+  assert "$output" same_as 'normal'
+}
+
+@test '-z4b-sanitize-word-prefix: empty string returns empty' {
+  run -z4b-sanitize-word-prefix ''
+  assert "$output" same_as ''
+}
+
+@test '-z4b-sanitize-word-prefix: removes all double quotes' {
+  run -z4b-sanitize-word-prefix 'a"b"c'
+  assert "$output" same_as 'abc'
+}
+
+@test '-z4b-sanitize-word-prefix: removes all single quotes' {
+  run -z4b-sanitize-word-prefix "a'b'c"
+  assert "$output" same_as 'abc'
+}
+
+@test '-z4b-sanitize-word-prefix: removes all backslashes' {
+  run -z4b-sanitize-word-prefix 'a\\b\\c'
+  assert "$output" same_as 'abc'
+}
+
+# ── -z4b-prompt-length ──────────────────────────────────────────────────────
+
+@test '-z4b-prompt-length: plain text length' {
+  -z4b-prompt-length 'hello'
+  assert "$REPLY" same_as '5'
+}
+
+@test '-z4b-prompt-length: prompt escapes stripped' {
+  -z4b-prompt-length '%F{red}hi%f'
+  assert "$REPLY" same_as '2'
+}
+
+@test '-z4b-prompt-length: empty string is zero' {
+  -z4b-prompt-length ''
+  assert "$REPLY" same_as '0'
+}
+
+@test '-z4b-prompt-length: mixed prompt escapes and text' {
+  -z4b-prompt-length '%F{green}hello%f world'
+  assert "$REPLY" same_as '11'
+}
+
+@test '-z4b-prompt-length: only prompt escapes' {
+  -z4b-prompt-length '%F{red}%f'
+  assert "$REPLY" same_as '0'
+}
+
+# ── -z4b-string-diff ─────────────────────────────────────────────────────────
+
+@test '-z4b-string-diff: identical strings produce matching segment' {
+  -z4b-string-diff 'abc' 'abc'
+  # Identical strings produce a single matching segment: reply=("abc" "abc")
+  assert "${#reply[@]}" same_as '2'
+  assert "${reply[1]}" same_as 'abc'
+  assert "${reply[2]}" same_as 'abc'
+}
+
+@test '-z4b-string-diff: insertion from empty to string' {
+  -z4b-string-diff '' 'abc'
+  assert "${#reply[@]}" same_as '2'
+  assert "${reply[1]}" same_as ''
+  assert "${reply[2]}" same_as 'abc'
+}
+
+@test '-z4b-string-diff: deletion from string to empty' {
+  -z4b-string-diff 'abc' ''
+  assert "${#reply[@]}" same_as '2'
+  assert "${reply[1]}" same_as 'abc'
+  assert "${reply[2]}" same_as ''
+}
+
+@test '-z4b-string-diff: kitten to sitting produces edits' {
+  -z4b-string-diff 'kitten' 'sitting'
+  assert "${#reply[@]}" same_as '10'
+}
+
+@test '-z4b-string-diff: both empty produces empty reply' {
+  -z4b-string-diff '' ''
+  assert "${#reply[@]}" same_as '0'
+}
+
+@test '-z4b-string-diff: single char substitution' {
+  -z4b-string-diff 'a' 'b'
+  assert "${#reply[@]}" same_as '2'
+  assert "${reply[1]}" same_as 'a'
+  assert "${reply[2]}" same_as 'b'
+}
+
+# ── -z4b-compile ─────────────────────────────────────────────────────────────
+
+@test '-z4b-compile: creates .zwc when missing' {
+  local tmpdir="$(mktemp -d)"
+  local src="$tmpdir/test_file.zsh"
+  echo '# test file' > "$src"
+
+  -z4b-compile "$src"
+
+  [[ -f "${src}.zwc" ]]
+  assert $state equals 0
+
+  rm -rf "$tmpdir"
+}
+
+@test '-z4b-compile: skips when .zwc is newer' {
+  local tmpdir="$(mktemp -d)"
+  local src="$tmpdir/test_file.zsh"
+  local zwc="${src}.zwc"
+  echo '# old source' > "$src"
+  zcompile "$zwc" "$src" 2>/dev/null
+  local zwc_mtime="$(stat -c %Y "$zwc" 2>/dev/null || stat -f %m "$zwc")"
+
+  # Source is unchanged, so .zwc should remain the same
+  -z4b-compile "$src"
+
+  local zwc_mtime2="$(stat -c %Y "$zwc" 2>/dev/null || stat -f %m "$zwc")"
+  assert "$zwc_mtime" same_as "$zwc_mtime2"
+
+  rm -rf "$tmpdir"
+}
+
+@test '-z4b-compile: recompiles when source is newer' {
+  local tmpdir="$(mktemp -d)"
+  local src="$tmpdir/test_file.zsh"
+  local zwc="${src}.zwc"
+
+  # Create source and compile
+  echo '# v1' > "$src"
+  zcompile "$zwc" "$src" 2>/dev/null
+
+  # Touch source to make it newer (sleep to ensure mtime difference)
+  sleep 1
+  echo '# v2' > "$src"
+
+  -z4b-compile "$src"
+
+  # .zwc should now be newer than source
+  [[ "$zwc" -nt "$src" ]]
+  assert $state equals 0
+
+  rm -rf "$tmpdir"
+}
+
+# ── -z4b-set-list-colors ─────────────────────────────────────────────────────
+
+@test '-z4b-set-list-colors: appends --color= to FZF_DEFAULT_OPTS' {
+  unset FZF_DEFAULT_OPTS
+  -z4b-set-list-colors
+  assert "$FZF_DEFAULT_OPTS" contains '--color='
+}
+
+@test '-z4b-set-list-colors: preserves existing FZF_DEFAULT_OPTS' {
+  export FZF_DEFAULT_OPTS='--height 40%'
+  -z4b-set-list-colors
+  assert "$FZF_DEFAULT_OPTS" contains '--height 40%'
+  assert "$FZF_DEFAULT_OPTS" contains '--color='
+}
+
+@test '-z4b-set-list-colors: contains expected color keys' {
+  unset FZF_DEFAULT_OPTS
+  -z4b-set-list-colors
+  assert "$FZF_DEFAULT_OPTS" contains 'fg+:'
+  assert "$FZF_DEFAULT_OPTS" contains 'hl+:'
+  assert "$FZF_DEFAULT_OPTS" contains 'pointer:'
+}
+
+# ── -z4b-find ────────────────────────────────────────────────────────────────
+
+@test '-z4b-find: finds matching files' {
+  local tmpdir="$(mktemp -d)"
+  touch "$tmpdir/foo.txt" "$tmpdir/bar.txt" "$tmpdir/baz.zsh"
+
+  # Use exact filename — works with both fd (regex) and find (glob)
+  run -z4b-find "$tmpdir" 'foo.txt'
+  assert "$output" contains 'foo.txt'
+
+  rm -rf "$tmpdir"
+}
+
+@test '-z4b-find: does not find non-matching files' {
+  local tmpdir="$(mktemp -d)"
+  touch "$tmpdir/foo.txt"
+
+  run -z4b-find "$tmpdir" 'absent.xyz'
+  # Output should be empty or not contain foo.txt
+  local has_match=0
+  [[ "$output" == *'foo.txt'* ]] && has_match=1
+  assert "$has_match" same_as '0'
+
+  rm -rf "$tmpdir"
+}
+
+@test '-z4b-find: returns empty for empty directory' {
+  local tmpdir="$(mktemp -d)"
+
+  run -z4b-find "$tmpdir" '*.txt'
+  # Empty dir should produce no matches
+  assert "$output" same_as ''
+
+  rm -rf "$tmpdir"
+}
+
+@test '-z4b-find: finds files in subdirectories' {
+  local tmpdir="$(mktemp -d)"
+  mkdir "$tmpdir/sub"
+  touch "$tmpdir/sub/nested.txt"
+
+  local result
+  result="$(-z4b-find "$tmpdir" 'nested.txt')"
+
+  assert "$result" contains 'nested.txt'
+
+  rm -rf "$tmpdir"
+}
