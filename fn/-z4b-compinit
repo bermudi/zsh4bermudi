@@ -1,46 +1,20 @@
-# -z4b-compinit - Lazy compinit with dump caching via mtime signature
-# Adapted from z4h's -z4h-compinit
-
-# This function schedules compinit to run after the first prompt
-# to avoid blocking startup
+# -z4b-compinit - Initialize completion system with dump caching
+# Runs compinit with a persistent dump file for fast subsequent loads.
+# Resilient to errexit: every potentially-failing command is guarded.
 
 local dump_file="${Z4B_ROOT:-~/.cache/zsh4bermudi}/cache/zcompdump"
-local signature_file="${dump_file}.sig"
+mkdir -p "${dump_file:h}"
 
-# Function to actually run compinit
-_z4b_run_compinit() {
-  # Load bashcompinit if available
-  if (( ${+functions[bashcompinit]} )); then
-    bashcompinit
-  fi
+autoload -Uz compinit
+compinit -d "$dump_file" 2>/dev/null || compinit 2>/dev/null || true
 
-  # Run compinit with caching
-  autoload -Uz compinit
-  compinit -d "$dump_file"
+# Wire up bash completions for installed tools
+autoload -Uz bashcompinit 2>/dev/null && bashcompinit 2>/dev/null || true
+local tool
+for tool in cargo gh kubectl helm terraform vault gcloud aws; do
+  command -v "$tool" >/dev/null 2>&1 || continue
+  [[ -f "/usr/share/bash-completion/completions/$tool" ]] || continue
+  source "/usr/share/bash-completion/completions/$tool" 2>/dev/null || true
+done
 
-  # Wire up language-specific completions if installed
-  local -a completion_tools=(cargo gh kubectl helm terraform vault gcloud aws)
-  local tool
-  for tool in "${completion_tools[@]}"; do
-    if command -v "$tool" >/dev/null 2>&1; then
-      # Source tool-specific completion if available
-      # This is a simplified version - real implementation would check specific paths
-      if [[ -f "/usr/share/bash-completion/completions/$tool" ]]; then
-        source "/usr/share/bash-completion/completions/$tool"
-      fi
-    fi
-  done
-
-  # Remove the file descriptor watcher
-  [[ -n "$_z4b_compinit_fd" ]] && {
-    zle -F "$_z4b_compinit_fd"
-    exec {_z4b_compinit_fd}<&-
-    unset _z4b_compinit_fd
-  }
-}
-
-# Schedule compinit to run after first prompt (interactive only)
-if [[ -o interactive ]] && [[ -z "$_z4b_compinit_fd" ]]; then
-  exec {_z4b_compinit_fd}</dev/null
-  zle -F "$_z4b_compinit_fd" _z4b_run_compinit
-fi
+return 0

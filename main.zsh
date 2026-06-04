@@ -154,7 +154,7 @@ z4b_init() {
 
   # Initialize lazy compinit
   if [[ -f "$Z4B_ROOT/fn/-z4b-compinit" ]]; then
-    source "$Z4B_ROOT/fn/-z4b-compinit"
+    source "$Z4B_ROOT/fn/-z4b-compinit" || true
   fi
 
   # Install starship binary during init if missing
