@@ -65,6 +65,7 @@
 
 @test 'Environment variables are set after z4b init' {
   unset _z4b_bootstrapped _z4b_initialized
+  unset PAGER LESS DIRSTACKSIZE VIRTUAL_ENV_DISABLE_PROMPT COLORTERM
   source "$Z4B_ROOT/z4b.zsh"
   z4b init
 

@@ -1,0 +1,32 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  zunit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zsh git curl
+      - name: Install zunit
+        run: |
+          git clone https://github.com/zunit-framework/zunit.git /tmp/zunit
+          cd /tmp/zunit && ./build.zsh && sudo cp zunit /usr/local/bin/
+      - name: Run zunit tests
+        run: zunit
+
+  container-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build container image
+        run: docker build -t z4b-test -f Containerfile.test .
+      - name: Run container smoke test
+        run: docker run --rm z4b-test -c 'echo "SMOKE_OK"'

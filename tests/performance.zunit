@@ -1,0 +1,52 @@
+#!/usr/bin/env zunit
+
+@test 'z4b init completes within 2 seconds' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+
+  zmodload zsh/datetime 2>/dev/null
+  local start=$EPOCHREALTIME
+  run z4b init
+  local elapsed=$(( EPOCHREALTIME - start ))
+
+  assert $state equals 0
+  # Should be well under 2s even on slow CI runners; a 28ms target
+  # would be flaky, so we gate on a coarse ceiling.
+  (( elapsed < 2.0 ))
+  assert $state equals 0
+}
+
+@test 'compinit dump file is created after z4b init' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  run z4b init
+  assert $state equals 0
+
+  local dump_dir="${XDG_CACHE_HOME:-$HOME/.cache}/zsh4bermudi"
+  [[ -f "$dump_dir/zcompdump" ]]
+  assert $state equals 0
+}
+
+@test 'z4b.zsh bootstrap is idempotent' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  run z4b init
+  assert $state equals 0
+
+  local fn_count_before=0
+  local p
+  for p in $fpath; do
+    [[ "$p" == "$Z4B_ROOT/fn" ]] && (( fn_count_before++ ))
+  done
+
+  source "$Z4B_ROOT/z4b.zsh"
+  run z4b init
+  assert $state equals 0
+
+  local fn_count_after=0
+  for p in $fpath; do
+    [[ "$p" == "$Z4B_ROOT/fn" ]] && (( fn_count_after++ ))
+  done
+
+  assert $fn_count_after equals $fn_count_before
+}

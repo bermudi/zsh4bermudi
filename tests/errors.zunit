@@ -1,0 +1,137 @@
+#!/usr/bin/env zunit
+
+# ── z4b.zsh bootstrap ───────────────────────────────────────────────────────
+
+@test 'Bootstrap errors when $ZSH_VERSION is unset' {
+  unset _z4b_bootstrapped
+  local saved_version="$ZSH_VERSION"
+  unset ZSH_VERSION
+
+  run source "$Z4B_ROOT/z4b.zsh"
+  assert $state not_equal_to 0
+  assert "$output" contains 'requires zsh'
+
+  ZSH_VERSION="$saved_version"
+}
+
+# ── Recovery mode bindings ──────────────────────────────────────────────────
+
+@test 'Recovery bindings are skipped when _z4b_recovery is set' {
+  unset _z4b_bootstrapped _z4b_initialized
+  _z4b_recovery=1
+
+  # Set up a known keymap state before sourcing
+  bindkey -v
+  source "$Z4B_ROOT/z4b.zsh"
+
+  # bindkey -e should NOT have been called, so we should still be in vi mode
+  # (check by binding a key in vicmd and seeing if it's active there)
+  local keymap=$(bindkey -lL main | awk '{print $3}')
+  assert "$keymap" same_as 'viins'
+
+  unset _z4b_recovery
+  bindkey -e
+}
+
+@test 'Recovery bindings are applied when _z4b_recovery is unset' {
+  unset _z4b_bootstrapped _z4b_initialized _z4b_recovery
+
+  source "$Z4B_ROOT/z4b.zsh"
+
+  local keymap=$(bindkey -lL main | awk '{print $3}')
+  assert "$keymap" same_as 'emacs'
+}
+
+# ── z4b init zmodload failure ───────────────────────────────────────────────
+
+@test 'z4b init returns 1 when zmodload fails' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+
+  function zmodload() {
+    if [[ "$1" == "zsh/datetime" ]]; then
+      return 1
+    fi
+    builtin zmodload "$@"
+  }
+
+  run z4b init
+  assert $state not_equal_to 0
+
+  unset -f zmodload
+}
+
+# ── z4b install invalid repo format ───────────────────────────────────────────
+
+@test 'z4b install rejects missing repo argument' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+
+  run z4b install
+  assert $state not_equal_to 0
+  assert "$output" contains 'usage'
+}
+
+@test '-z4b-install-one rejects repo without slash' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+  autoload -Uz -- -z4b-install-one
+
+  run -z4b-install-one "badrepo"
+  assert $state not_equal_to 0
+  assert "$output" contains 'invalid repository format'
+}
+
+@test '-z4b-install-one rejects empty repo' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+  autoload -Uz -- -z4b-install-one
+
+  run -z4b-install-one ""
+  assert $state not_equal_to 0
+  assert "$output" contains 'invalid repository format'
+}
+
+# ── z4b load / source with non-existent paths ───────────────────────────────
+
+@test 'z4b load with non-existent path returns 0 silently' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+
+  run z4b load /nonexistent/path/that/does/not/exist
+  assert $state equals 0
+  assert "$output" is_empty
+}
+
+@test 'z4b source with non-existent path returns 0 silently' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+
+  run z4b source /nonexistent/path/that/does/not/exist.zsh
+  assert $state equals 0
+  assert "$output" is_empty
+}
+
+# ── -z4b-install-one git clone failure ──────────────────────────────────────
+
+@test '-z4b-install-one fails when git clone fails' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+  autoload -Uz -- -z4b-install-one
+
+  function git() {
+    return 1
+  }
+
+  run -z4b-install-one "owner/nonexistent-repo-$$"
+  assert $state not_equal_to 0
+  assert "$output" contains 'installing'
+
+  unset -f git
+}

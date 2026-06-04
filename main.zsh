@@ -40,28 +40,18 @@ z4b() {
 z4b_init() {
   # Load essential zsh modules
   zmodload zsh/datetime || return 1
+  zmodload zsh/files || return 1
   zmodload zsh/system || return 1
   zmodload zsh/terminfo || return 1
   zmodload zsh/zutil || return 1
 
-  # Homebrew detection and PATH/fpath setup
-  local _brew_prefix=""
-  if [[ -x "/opt/homebrew/bin/brew" ]]; then
-    _brew_prefix="/opt/homebrew"
-  elif [[ -x "/usr/local/bin/brew" ]]; then
-    _brew_prefix="/usr/local"
-  fi
-
-  if [[ -n "$_brew_prefix" ]]; then
-    # Prepend Homebrew paths
-    path=("$_brew_prefix/bin" "$_brew_prefix/sbin" "$path[@]")
-    fpath=("$_brew_prefix/share/zsh/site-functions" "$fpath[@]")
-  fi
-
   # Autoload functions from Z4B_ROOT/fn
   if [[ -d "$Z4B_ROOT/fn" ]]; then
-    fpath=("$Z4B_ROOT/fn" "$fpath[@]")
-    local _z4b_fn
+    local _z4b_fn _z4b_found=0
+    for p in $fpath; do
+      [[ "$p" == "$Z4B_ROOT/fn" ]] && _z4b_found=1
+    done
+    (( ! _z4b_found )) && fpath=("$Z4B_ROOT/fn" "$fpath[@]")
     for _z4b_fn in "$Z4B_ROOT/fn"/^([-_.]*|README*|*~|*.zwc)(-.N:t); do
       autoload -Uz -- "$_z4b_fn"
     done
@@ -79,8 +69,8 @@ z4b_init() {
   export VIRTUAL_ENV_DISABLE_PROMPT="${VIRTUAL_ENV_DISABLE_PROMPT:-1}"
   export COLORTERM="${COLORTERM:-truecolor}"
 
-  # ZLE initialization
-  if [[ -f "$Z4B_ROOT/init-zle.zsh" ]]; then
+  # ZLE initialization (idempotent: only source once)
+  if [[ -f "$Z4B_ROOT/init-zle.zsh" ]] && (( ! ${+_z4b_key} )); then
     source "$Z4B_ROOT/init-zle.zsh"
   fi
 
@@ -101,7 +91,7 @@ z4b_init() {
   done
 
   # Install fzf binary automatically if missing
-  if ! command -v fzf >/dev/null 2>&1; then
+  if [[ -n "$Z4B_TEST_FZF_MISSING" ]] || ! command -v fzf >/dev/null 2>&1; then
     local _fzf_install_dir="$Z4B_ROOT/fzf"
     if [[ ! -d "$_fzf_install_dir" ]]; then
       print "z4b: installing fzf..."
@@ -145,12 +135,11 @@ z4b_init() {
   zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=*' 'l:|=* r:|=*'
   zstyle ':completion:*' keep-prefix true
   zstyle ':completion:*' squeeze-slashes true
-  zstyle ':completion:*' cache-path "${Z4B_ROOT}/cache/zcompcache"
+  zstyle ':completion:*' cache-path "${XDG_CACHE_HOME:-$HOME/.cache}/zsh4bermudi/zcompcache"
   zstyle ':completion:*' ignore-parents parent pwd
   zstyle ':completion:*' verbose yes
   zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
-  zstyle ':completion:*' completer _complete _match _approximate
-  zstyle ':completion:*' max-errors 2 numeric
+  zstyle ':completion:*' completer _complete _match
 
   # Initialize lazy compinit
   if [[ -f "$Z4B_ROOT/fn/-z4b-compinit" ]]; then
@@ -255,6 +244,7 @@ z4b_load() {
 }
 
 z4b_source() {
+  zmodload zsh/files 2>/dev/null || true
   local _z4b_file _z4b_compile
   zparseopts -D -F -- c=_z4b_compile -compile=_z4b_compile || return 1
   

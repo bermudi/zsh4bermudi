@@ -1,0 +1,218 @@
+#!/usr/bin/env zunit
+
+@setup {
+  _saved_path=("$path[@]")
+  _saved_fpath=("$fpath[@]")
+}
+
+@teardown {
+  path=("${_saved_path[@]}")
+  fpath=("${_saved_fpath[@]}")
+}
+
+# ── z4b load ──────────────────────────────────────────────────────────────
+
+@test 'z4b load injects package fpath and sources init.zsh' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+
+  local pkg_dir=$(mktemp -d)
+  mkdir -p "$pkg_dir/functions"
+  print 'z4b_load_test_var="loaded"' > "$pkg_dir/init.zsh"
+  print 'z4b_load_test_fn() { echo hello; }' > "$pkg_dir/functions/z4b_load_test_fn"
+
+  z4b load "$pkg_dir"
+
+  local found_pkg=0 found_fn=0
+  local p
+  for p in $fpath; do
+    [[ "$p" == "$pkg_dir" ]] && found_pkg=1
+    [[ "$p" == "$pkg_dir/functions" ]] && found_fn=1
+  done
+  assert $found_pkg equals 1
+  assert $found_fn equals 1
+
+  assert "$z4b_load_test_var" same_as 'loaded'
+  assert "$(whence -w z4b_load_test_fn 2>/dev/null)" same_as 'z4b_load_test_fn: function'
+
+  rm -rf "$pkg_dir"
+}
+
+# ── z4b source ──────────────────────────────────────────────────────────────
+
+@test 'z4b source cleans up external .zwc files' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+
+  local tmpdir=$(mktemp -d)
+  print 'z4b_source_test_var="sourced"' > "$tmpdir/test.zsh"
+  touch "$tmpdir/test.zsh.zwc"
+
+  z4b source "$tmpdir/test.zsh"
+
+  assert "$z4b_source_test_var" same_as 'sourced'
+  local has_zwc=0
+  [[ -f "$tmpdir/test.zsh.zwc" ]] && has_zwc=1
+  assert $has_zwc equals 0
+
+  rm -rf "$tmpdir"
+}
+
+@test 'z4b source with -c does not clean .zwc' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+
+  local tmpdir=$(mktemp -d)
+  print 'z4b_source_compile_var="compiled"' > "$tmpdir/test2.zsh"
+  touch "$tmpdir/test2.zsh.zwc"
+
+  z4b source -c "$tmpdir/test2.zsh"
+
+  assert "$z4b_source_compile_var" same_as 'compiled'
+  [[ -f "$tmpdir/test2.zsh.zwc" ]]
+  assert $state equals 0
+
+  rm -rf "$tmpdir"
+}
+
+# ── Starship init evaluation ───────────────────────────────────────────────
+
+@test 'z4b init evaluates starship init when binary is available' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+
+  local fake_dir=$(mktemp -d)
+  print '#!/usr/bin/env zsh\nif [[ "$1" == "init" && "$2" == "zsh" ]]; then\n  echo "STARSHIP_TEST_INIT=1"\nfi' > "$fake_dir/starship"
+  chmod +x "$fake_dir/starship"
+  path=("$fake_dir" "$path[@]")
+
+  z4b init
+
+  assert "$STARSHIP_TEST_INIT" same_as '1'
+
+  rm -rf "$fake_dir"
+}
+
+# ── fzf binary installation stub ───────────────────────────────────────────
+
+@test 'z4b init stubs fzf installation when binary is missing' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+
+  rm -rf "$Z4B_ROOT/fzf"
+
+  local tmpout=$(mktemp)
+  Z4B_TEST_FZF_MISSING=1 z4b init > "$tmpout" 2>&1
+  local output=$(cat "$tmpout")
+  rm -f "$tmpout"
+
+  assert "$output" contains 'fzf installation stub'
+  assert "$output" contains 'installing fzf'
+}
+
+@test 'z4b init adds fzf to path when binary is missing' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+
+  Z4B_TEST_FZF_MISSING=1 z4b init
+
+  local found=0
+  local p
+  for p in $path; do
+    [[ "$p" == "$Z4B_ROOT/fzf/bin" ]] && found=1
+  done
+  assert $found equals 1
+}
+
+# ── Locale fix ─────────────────────────────────────────────────────────────
+
+@test 'z4b init fixes non-UTF-8 locale' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+
+  LANG=C
+  LC_ALL=C
+  z4b init
+
+  assert "$LC_ALL" same_as 'en_US.UTF-8'
+  assert "$LANG" same_as 'en_US.UTF-8'
+}
+
+# ── Auto-update check ──────────────────────────────────────────────────────
+
+@test 'z4b init prints update check after 28 days' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+
+  local check_file="$Z4B_ROOT/cache/last-update-check"
+  mkdir -p "${check_file:h}"
+  echo $(( $(date +%s) - 29 * 24 * 60 * 60 )) > "$check_file"
+
+  run z4b init
+
+  assert "$output" contains 'Checking for updates'
+
+  rm -f "$check_file"
+}
+
+@test 'z4b init does not print update check within 28 days' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+
+  local check_file="$Z4B_ROOT/cache/last-update-check"
+  mkdir -p "${check_file:h}"
+  echo $(( $(date +%s) - 7 * 24 * 60 * 60 )) > "$check_file"
+
+  run z4b init
+
+  assert "$output" does_not_contain 'Checking for updates'
+
+  rm -f "$check_file"
+}
+
+@test 'z4b init creates update check file on first run' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+
+  local check_file="$Z4B_ROOT/cache/last-update-check"
+  rm -f "$check_file"
+
+  z4b init
+
+  [[ -f "$check_file" ]]
+  assert $state equals 0
+
+  rm -f "$check_file"
+}
+
+# ── Completion zstyles ───────────────────────────────────────────────────────
+
+@test 'z4b init sets completion zstyles' {
+  unset _z4b_bootstrapped _z4b_initialized
+  source "$Z4B_ROOT/z4b.zsh"
+  z4b init
+
+  local val
+  local -a vals
+
+  zstyle -s ':completion:*' menu val
+  assert "$val" same_as 'select'
+
+  zstyle -a ':completion:*' matcher-list vals
+  assert "${#vals}" equals 3
+  assert "${vals[1]}" same_as 'm:{a-zA-Z}={A-Za-z}'
+
+  zstyle -s ':completion:*' cache-path val
+  assert "$val" contains 'zcompcache'
+
+  zstyle -b ':completion:*' verbose val
+  assert "$val" same_as 'yes'
+
+  zstyle -b ':completion:*' squeeze-slashes val
+  assert "$val" same_as 'yes'
+
+  zstyle -s ':completion:*' keep-prefix val
+  assert "$val" same_as 'true'
+}

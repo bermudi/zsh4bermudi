@@ -1,0 +1,165 @@
+#!/usr/bin/env zunit
+
+@setup {
+  _real_git=$(command -v git)
+
+  _isolated_path() {
+    local dir=$(mktemp -d)
+    local bin
+    for bin in "$@"; do
+      [[ -n "$bin" && -x "$bin" ]] && ln -s "$bin" "$dir/${bin:t}"
+    done
+    # Essential coreutils that setup.zsh needs
+    for bin in mkdir cat grep chmod touch ln printf env mktemp rm cp; do
+      local found=$(command -v "$bin" 2>/dev/null)
+      [[ -n "$found" && -x "$found" && ! -e "$dir/$bin" ]] && ln -s "$found" "$dir/$bin"
+    done
+    print "$dir"
+  }
+
+  _make_fake_git() {
+    local dir="$1"
+    local real_git="$_real_git"
+    cat > "$dir/git" << EOF
+#!/usr/bin/env zsh
+if [[ "\$1" == "clone" ]]; then
+  mkdir -p "\$4"
+  (cd "\$4" && "$real_git" init && "$real_git" config user.email "test@test" && "$real_git" config user.name "Test")
+  exit 0
+elif [[ "\$1" == "pull" ]]; then
+  exit 0
+fi
+"$real_git" "\$@"
+EOF
+    chmod +x "$dir/git"
+  }
+}
+
+@test 'setup.zsh fails when git is missing' {
+  local tmp_home=$(mktemp -d)
+  local path_dir=$(_isolated_path "$(command -v zsh)")
+
+  run env HOME="$tmp_home" PATH="$path_dir" zsh "$Z4B_ROOT/setup.zsh"
+  assert $state not_equal_to 0
+  assert "$output" contains 'Missing required dependencies'
+  assert "$output" contains 'git'
+
+  rm -rf "$tmp_home" "$path_dir"
+}
+
+@test 'setup.zsh fails when curl and wget are missing' {
+  local tmp_home=$(mktemp -d)
+  local path_dir=$(_isolated_path "$(command -v zsh)" "$_real_git")
+
+  run env HOME="$tmp_home" PATH="$path_dir" zsh "$Z4B_ROOT/setup.zsh"
+  assert $state not_equal_to 0
+  assert "$output" contains 'Missing required dependencies'
+  assert "$output" contains 'curl or wget'
+
+  rm -rf "$tmp_home" "$path_dir"
+}
+
+@test 'setup.zsh creates ~/.zshenv when missing' {
+  local tmp_home=$(mktemp -d)
+  local path_dir=$(_isolated_path "$(command -v zsh)" "$(command -v curl)")
+  local fake_git=$(mktemp -d)
+  _make_fake_git "$fake_git"
+
+  run env HOME="$tmp_home" PATH="$fake_git:$path_dir" zsh "$Z4B_ROOT/setup.zsh"
+  assert $state equals 0
+
+  [[ -f "$tmp_home/.zshenv" ]]
+  assert $state equals 0
+
+  assert "$(< "$tmp_home/.zshenv")" contains 'Z4B_ROOT'
+  assert "$(< "$tmp_home/.zshenv")" contains 'z4b.zsh'
+
+  rm -rf "$tmp_home" "$path_dir" "$fake_git"
+}
+
+@test 'setup.zsh appends to ~/.zshenv when missing z4b config' {
+  local tmp_home=$(mktemp -d)
+  print 'existing content' > "$tmp_home/.zshenv"
+  local path_dir=$(_isolated_path "$(command -v zsh)" "$(command -v curl)")
+  local fake_git=$(mktemp -d)
+  _make_fake_git "$fake_git"
+
+  run env HOME="$tmp_home" PATH="$fake_git:$path_dir" zsh "$Z4B_ROOT/setup.zsh"
+  assert $state equals 0
+
+  assert "$(< "$tmp_home/.zshenv")" contains 'existing content'
+  assert "$(< "$tmp_home/.zshenv")" contains 'Z4B_ROOT'
+
+  rm -rf "$tmp_home" "$path_dir" "$fake_git"
+}
+
+@test 'setup.zsh skips ~/.zshenv when already configured' {
+  local tmp_home=$(mktemp -d)
+  print $'export Z4B_ROOT=/foo\n[[ -f "$Z4B_ROOT/z4b.zsh" ]] && source "$Z4B_ROOT/z4b.zsh"' > "$tmp_home/.zshenv"
+  local path_dir=$(_isolated_path "$(command -v zsh)" "$(command -v curl)")
+  local fake_git=$(mktemp -d)
+  _make_fake_git "$fake_git"
+
+  run env HOME="$tmp_home" PATH="$fake_git:$path_dir" zsh "$Z4B_ROOT/setup.zsh"
+  assert $state equals 0
+
+  assert "$output" contains 'already contains'
+  # same_as breaks on multi-line strings in zunit; assert content directly
+  assert "$(< "$tmp_home/.zshenv")" contains 'export Z4B_ROOT=/foo'
+  assert "$(< "$tmp_home/.zshenv")" contains 'z4b.zsh'
+  assert "$(< "$tmp_home/.zshenv")" does_not_contain 'Z4B_ROOT=${Z4B_ROOT'
+
+  rm -rf "$tmp_home" "$path_dir" "$fake_git"
+}
+
+@test 'setup.zsh creates ~/.zshrc template when missing' {
+  local tmp_home=$(mktemp -d)
+  local path_dir=$(_isolated_path "$(command -v zsh)" "$(command -v curl)")
+  local fake_git=$(mktemp -d)
+  _make_fake_git "$fake_git"
+
+  run env HOME="$tmp_home" PATH="$fake_git:$path_dir" zsh "$Z4B_ROOT/setup.zsh"
+  assert $state equals 0
+
+  [[ -f "$tmp_home/.zshrc" ]]
+  assert $state equals 0
+
+  assert "$(< "$tmp_home/.zshrc")" contains 'z4b init'
+  assert "$output" contains 'Creating ~/.zshrc'
+
+  rm -rf "$tmp_home" "$path_dir" "$fake_git"
+}
+
+@test 'setup.zsh skips ~/.zshrc when existing' {
+  local tmp_home=$(mktemp -d)
+  print 'custom config' > "$tmp_home/.zshrc"
+  local path_dir=$(_isolated_path "$(command -v zsh)" "$(command -v curl)")
+  local fake_git=$(mktemp -d)
+  _make_fake_git "$fake_git"
+
+  run env HOME="$tmp_home" PATH="$fake_git:$path_dir" zsh "$Z4B_ROOT/setup.zsh"
+  assert $state equals 0
+
+  assert "$output" contains 'already exists'
+  assert "$(< "$tmp_home/.zshrc")" same_as 'custom config'
+
+  rm -rf "$tmp_home" "$path_dir" "$fake_git"
+}
+
+@test 'setup.zsh updates existing installation' {
+  local tmp_home=$(mktemp -d)
+  local target="$tmp_home/.cache/zsh4bermudi"
+  mkdir -p "$target"
+  (cd "$target" && git init && git config user.email "test@test" && git config user.name "Test" && touch dummy && git add dummy && git commit -m 'init')
+
+  local path_dir=$(_isolated_path "$(command -v zsh)" "$(command -v curl)")
+  local fake_git=$(mktemp -d)
+  _make_fake_git "$fake_git"
+
+  run env HOME="$tmp_home" PATH="$fake_git:$path_dir" zsh "$Z4B_ROOT/setup.zsh"
+  assert $state equals 0
+
+  assert "$output" contains 'Updating existing installation'
+
+  rm -rf "$tmp_home" "$path_dir" "$fake_git"
+}
