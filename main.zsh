@@ -65,6 +65,10 @@ z4b_init() {
     for _z4b_fn in "$Z4B_ROOT/fn"/^([-_.]*|README*|*~|*.zwc)(-.N:t); do
       autoload -Uz -- "$_z4b_fn"
     done
+    # Also autoload internal helpers (prefixed with -)
+    for _z4b_fn in "$Z4B_ROOT/fn"/-*(N:t); do
+      autoload -Uz -- "$_z4b_fn"
+    done
   fi
 
   # Basic environment variables
@@ -174,9 +178,9 @@ z4b_init() {
   # Add terminal title hooks (interactive only)
   if [[ -o interactive ]] && [[ -f "$Z4B_ROOT/fn/-z4b-set-terminal-title" ]]; then
     autoload -Uz add-zsh-hook
-    source "$Z4B_ROOT/fn/-z4b-set-terminal-title"
-    add-zsh-hook precmd _z4b-set-terminal-title
-    add-zsh-hook preexec _z4b-set-terminal-title
+    autoload -Uz -- -z4b-set-terminal-title
+    add-zsh-hook precmd -z4b-set-terminal-title
+    add-zsh-hook preexec -z4b-set-terminal-title
   fi
 
   # Add locale fix (detect non-UTF-8 and set LC_ALL)
