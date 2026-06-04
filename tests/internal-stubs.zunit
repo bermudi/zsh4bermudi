@@ -86,32 +86,27 @@
 # ── -z4b-comp-insert-all ────────────────────────────────────────────────────
 
 @test '-z4b-comp-insert-all: inserts at word boundary after trailing space' {
-  # prefix="cd ", strip trailing space → word_start=2, suffix=""
   BUFFER="cd "
   CURSOR=3
   -z4b-comp-insert-all "src"
-  # prefix[0:2]="cd" + "src" + "" = "cdsrc"
-  assert "$BUFFER" same_as 'cdsrc'
-  assert "$CURSOR" equals 5
+  assert "$BUFFER" same_as 'cd src'
+  assert "$CURSOR" equals 6
 }
 
-@test '-z4b-comp-insert-all: appends result when no trailing space' {
-  # prefix="hello", no trailing space → word_start=5, suffix=""
+@test '-z4b-comp-insert-all: replaces whole word when no trailing space' {
   BUFFER="hello"
   CURSOR=5
   -z4b-comp-insert-all "world"
-  assert "$BUFFER" same_as 'helloworld'
-  assert "$CURSOR" equals 10
+  assert "$BUFFER" same_as 'world'
+  assert "$CURSOR" equals 5
 }
 
-@test '-z4b-comp-insert-all: inserts mid-word preserving suffix' {
-  # prefix="ls ol", no trailing space → word_start=5, suffix="d world"
+@test '-z4b-comp-insert-all: replaces entire word mid-buffer' {
   BUFFER="ls old world"
   CURSOR=5
   -z4b-comp-insert-all "new"
-  # prefix[0:5]="ls ol" + "new" + "d world" = "ls olnewd world"
-  assert "$BUFFER" same_as 'ls olnewd world'
-  assert "$CURSOR" equals 8
+  assert "$BUFFER" same_as 'ls new world'
+  assert "$CURSOR" equals 6
 }
 
 # ── -z4b-install-many ───────────────────────────────────────────────────────

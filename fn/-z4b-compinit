@@ -2,8 +2,9 @@
 # Runs compinit with a persistent dump file for fast subsequent loads.
 # Resilient to errexit: every potentially-failing command is guarded.
 
-local dump_file="${Z4B_ROOT:-~/.cache/zsh4bermudi}/cache/zcompdump"
-mkdir -p "${dump_file:h}"
+local dump_dir="${XDG_CACHE_HOME:-$HOME/.cache}/zsh4bermudi"
+local dump_file="$dump_dir/zcompdump"
+mkdir -p "$dump_dir"
 
 autoload -Uz compinit
 compinit -d "$dump_file" 2>/dev/null || compinit 2>/dev/null || true

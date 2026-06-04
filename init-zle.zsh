@@ -247,8 +247,8 @@ bindkey '^[/'     redo                         # alt+/
 # Expand alias/glob/parameter
 bindkey '^ '      z4b-expand                   # ctrl+space
 
-# Generic command completion (stub for fzf)
-bindkey '^I'      self-insert                  # tab
+# Generic command completion
+bindkey '^I'      expand-or-complete           # tab
 
 # Show help for the command at cursor
 bindkey '^[h'     run-help                     # alt+h

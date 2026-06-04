@@ -2,7 +2,9 @@
 # Adapted from z4h's -z4h-main-complete
 
 # This function shadows zsh's _main_complete to intercept completions
-# and route them through fzf on the second tab press
+# and route them through fzf on the second tab press.
+# Must only be called when the original _main_complete was saved as
+# -z4b-orig-main-complete (done by z4b-fzf-complete).
 
 # Track tab presses for fzf fallback
 if [[ -z "$_z4b_tab_count" ]]; then
@@ -13,11 +15,18 @@ fi
 
 if (( _z4b_tab_count == 1 )); then
   # First tab: standard completion (common prefix)
-  _main_complete "$@"
+  if (( ${+functions[-z4b-orig-main-complete]} )); then
+    -z4b-orig-main-complete "$@"
+  else
+    # Fallback: we were called without the save/restore wrapper;
+    # just run standard completion and avoid infinite recursion.
+    _z4b_tab_count=0
+    return 1
+  fi
 else
   # Second tab: fzf completion
   _z4b_tab_count=0 # Reset for next time
-  
+
   # Determine if we're completing files or words
   if [[ "${words[CURRENT]}" == */* ]] || [[ -z "${words[CURRENT]}" ]]; then
     -z4b-comp-files "$@"

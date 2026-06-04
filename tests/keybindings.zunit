@@ -26,6 +26,10 @@
   # Ctrl+Space -> expand
   local ctrl_space=$(bindkey '^@')
   assert "$ctrl_space" contains 'z4b-expand'
+
+  # Tab -> completion
+  local tab=$(bindkey '^I')
+  assert "$tab" contains 'expand-or-complete'
 }
 
 @test 'Word navigation widgets are bound to Ctrl+arrow keys' {

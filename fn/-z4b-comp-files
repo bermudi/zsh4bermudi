@@ -9,9 +9,9 @@ local search_pattern="*"
 if [[ "$current_word" == */* ]]; then
   search_dir="${current_word%/*}"
   search_pattern="${current_word##*/}"
-  # Handle absolute paths
+  # Handle absolute paths: ensure exactly one leading slash
   if [[ "$current_word" == /* ]]; then
-    search_dir="/$search_dir"
+    search_dir="/${search_dir#/}"
   fi
 fi
 

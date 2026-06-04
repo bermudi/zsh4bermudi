@@ -8,12 +8,22 @@ local result="$1"
 local prefix="${BUFFER:0:${CURSOR}}"
 local suffix="${BUFFER:${CURSOR}}"
 
-# Find the word boundary to replace
-local word_start=${#${prefix%%[[:space:]]#}}
-local word_to_replace="${prefix:${word_start}}"
+# Find the start of the current word
+local word_start=0
+if [[ "$prefix" == *[[:space:]]* ]]; then
+  word_start=$(( ${#prefix} - ${#${prefix##*[[:space:]]}} ))
+fi
 
-# Replace the word with the completion result
-BUFFER="${prefix:0:${word_start}}${result}${suffix}"
+# Find the end of the current word in the suffix
+local word_end=0
+if [[ "$suffix" == *[[:space:]]* ]]; then
+  word_end=${#${suffix%%[[:space:]]*}}
+else
+  word_end=${#suffix}
+fi
+
+# Replace the entire word with the completion result
+BUFFER="${prefix:0:${word_start}}${result}${suffix:${word_end}}"
 CURSOR=$((word_start + ${#result}))
 
 zle redisplay
