@@ -5,15 +5,15 @@
 local result="$1"
 
 # Get current cursor position and prefix
-local prefix="${BUFFER:0:CURSOR}"
-local suffix="${BUFFER:CURSOR}"
+local prefix="${BUFFER:0:${CURSOR}}"
+local suffix="${BUFFER:${CURSOR}}"
 
 # Find the word boundary to replace
 local word_start=${#${prefix%%[[:space:]]#}}
-local word_to_replace="${prefix:word_start}"
+local word_to_replace="${prefix:${word_start}}"
 
 # Replace the word with the completion result
-BUFFER="${prefix:0:word_start}${result}${suffix}"
+BUFFER="${prefix:0:${word_start}}${result}${suffix}"
 CURSOR=$((word_start + ${#result}))
 
 zle redisplay
