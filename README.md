@@ -1,8 +1,6 @@
 # zsh4bermudi (z4b)
 
-A personal zsh framework. ~1,700 lines, ~28ms startup.
-
-Replaces zsh4humans with something smaller, auditable, and fast.
+A personal zsh framework — smaller, auditable, and fast. Replaces zsh4humans.
 
 ## What it does
 
@@ -19,7 +17,7 @@ z4b.zsh          # Bootstrap: options, fpath, sources main.zsh
 main.zsh         # CLI dispatcher (init/install/load/source/update/bindkey)
 init-zle.zsh     # ZLE widgets, key maps, bindkeys
 setup.zsh        # First-run setup (env, PATH, tools)
-fn/              # ~45 autoloaded functions (public + internal)
+fn/              # autoloaded functions (public z4b-* + internal -z4b-*)
 ```
 
 ## Try it
