@@ -2,8 +2,8 @@
 # Updates highlight regions before the line is redrawn
 
 # Ensure syntax highlighting is applied
-if (( ${+functions[zsh_highlight]} )); then
-  zsh_highlight
+if (( ${+functions[_zsh_highlight]} )); then
+  _zsh_highlight
 fi
 
 # Ensure history substring search highlighting is applied

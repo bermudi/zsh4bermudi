@@ -128,7 +128,7 @@
 
 # ── Locale fix ─────────────────────────────────────────────────────────────
 
-@test 'z4b init fixes non-UTF-8 locale' {
+@test 'z4b init fixes non-UTF-8 locale to an available UTF-8 locale' {
   unset _z4b_bootstrapped _z4b_initialized
   source "$Z4B_ROOT/z4b.zsh"
 
@@ -136,8 +136,13 @@
   LC_ALL=C
   z4b init
 
-  assert "$LC_ALL" same_as 'en_US.UTF-8'
-  assert "$LANG" same_as 'en_US.UTF-8'
+  # The chosen locale must be UTF-8...
+  [[ "$LC_ALL" == (*UTF-8*|*utf8*) ]]
+  assert $state equals 0
+  # ...and it must actually exist on this host (the whole point of the fix:
+  # never force a locale like en_US.UTF-8 that the system cannot provide).
+  locale -a 2>/dev/null | grep -Fxq -- "$LC_ALL"
+  assert $state equals 0
 }
 
 # ── Auto-update check ──────────────────────────────────────────────────────

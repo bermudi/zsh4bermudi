@@ -1,0 +1,26 @@
+# -z4b-pick-utf8-locale
+#
+# Print a UTF-8 locale that is actually available on the host, preferring
+# C.UTF-8 (ubiquitous on modern glibc), then any other available UTF-8 locale.
+# Print nothing if no UTF-8 locale is available.
+#
+# Args: available locales, one per arg. If none are given, uses `locale -a`.
+#       Tests pass a synthetic list to avoid depending on the host.
+#
+# Always exits 0. The chosen locale (if any) is on stdout with no trailing
+# newline; the caller decides whether to export it.
+
+emulate -L zsh
+
+local _z4b_loc
+local -a _z4b_avail=("$@")
+(( ${#_z4b_avail} )) || _z4b_avail=("${(f)$(locale -a 2>/dev/null)}")
+
+for _z4b_loc in C.UTF-8 C.utf8 "${_z4b_avail[@]}"; do
+  if [[ "$_z4b_loc" == (*UTF-8*|*utf8*) ]] \
+     && (( ${_z4b_avail[(ie)$_z4b_loc]} <= ${#_z4b_avail} )); then
+    print -rn -- "$_z4b_loc"
+    return 0
+  fi
+done
+return 0

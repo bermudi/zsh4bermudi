@@ -104,7 +104,7 @@ z4b_init() {
   fi
 
   # Configure zsh-syntax-highlighting
-  if (( ${+functions[zsh_highlight]} )); then
+  if (( ${+functions[_zsh_highlight]} )); then
     ZSH_HIGHLIGHT_HIGHLIGHTERS=(main brackets)
     ZSH_HIGHLIGHT_MAXLENGTH=1024
     ZSH_HIGHLIGHT_STYLES[comment]='fg=96'
@@ -116,7 +116,7 @@ z4b_init() {
   fi
 
   # Configure zsh-history-substring-search
-  if (( ${+functions[zsh_history_substring_search_up]} )); then
+  if (( ${+functions[history-substring-search-up]} )); then
     zle -N history-substring-search-up
     zle -N history-substring-search-down
     bindkey '^[[A' history-substring-search-up
@@ -172,10 +172,12 @@ z4b_init() {
     add-zsh-hook preexec -z4b-set-terminal-title
   fi
 
-  # Add locale fix (detect non-UTF-8 and set LC_ALL)
+  # Locale fix: ensure a UTF-8 locale is active. Prefer C.UTF-8 (ubiquitous),
+  # then any available UTF-8 locale. Never force a locale the host cannot
+  # provide — that makes every subprocess emit a setlocale warning.
   if [[ "$LANG" != *UTF-8* ]] && [[ "$LC_ALL" != *UTF-8* ]]; then
-    export LC_ALL=en_US.UTF-8
-    export LANG=en_US.UTF-8
+    local _z4b_locale=$(-z4b-pick-utf8-locale)
+    [[ -n "$_z4b_locale" ]] && export LC_ALL="$_z4b_locale" LANG="$_z4b_locale"
   fi
 
   # Add auto-update check (28-day interval)

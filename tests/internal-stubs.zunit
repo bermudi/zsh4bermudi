@@ -252,15 +252,15 @@
 
 # ── -z4b-zle-line-pre-redraw ────────────────────────────────────────────────
 
-@test '-z4b-zle-line-pre-redraw: calls zsh_highlight when available' {
+@test '-z4b-zle-line-pre-redraw: calls _zsh_highlight when available' {
   local _highlight_called=0
-  zsh_highlight() { _highlight_called=1; }
+  _zsh_highlight() { _highlight_called=1; }
   -z4b-zle-line-pre-redraw
   assert "$_highlight_called" equals 1
 }
 
-@test '-z4b-zle-line-pre-redraw: no-op when zsh_highlight is unavailable' {
-  unset 'functions[zsh_highlight]'
+@test '-z4b-zle-line-pre-redraw: no-op when _zsh_highlight is unavailable' {
+  unset 'functions[_zsh_highlight]'
   -z4b-zle-line-pre-redraw
   assert $state equals 0
 }

@@ -1,0 +1,45 @@
+#!/usr/bin/env zunit
+
+# Tests for the locale-selection helper. It takes the available-locale list as
+# args (so we never depend on the host's `locale -a`), and prints the chosen
+# UTF-8 locale (preferring C.UTF-8) or nothing.
+
+@setup {
+  fpath=("$Z4B_ROOT/fn" $fpath)
+  autoload -Uz -- -z4b-pick-utf8-locale
+}
+
+@test '-z4b-pick-utf8-locale: prefers C.UTF-8 when available' {
+  result=$(-z4b-pick-utf8-locale C POSIX C.UTF-8 en_US.UTF-8)
+  assert "$result" same_as 'C.UTF-8'
+}
+
+@test '-z4b-pick-utf8-locale: matches C.utf8 spelling' {
+  result=$(-z4b-pick-utf8-locale C POSIX C.utf8)
+  assert "$result" same_as 'C.utf8'
+}
+
+@test '-z4b-pick-utf8-locale: falls back to any other available UTF-8 locale' {
+  result=$(-z4b-pick-utf8-locale C POSIX en_GB.UTF-8)
+  assert "$result" same_as 'en_GB.UTF-8'
+}
+
+@test '-z4b-pick-utf8-locale: never selects a UTF-8 locale absent from the list' {
+  # en_US.UTF-8 is a common name but is NOT in the available list here,
+  # so it must not be chosen even though it matches the UTF-8 pattern.
+  result=$(-z4b-pick-utf8-locale C POSIX C.utf8)
+  assert "$result" same_as 'C.utf8'
+}
+
+@test '-z4b-pick-utf8-locale: prints nothing when no UTF-8 locale is available' {
+  result=$(-z4b-pick-utf8-locale C POSIX)
+  assert "$result" is_empty
+}
+
+@test '-z4b-pick-utf8-locale: no args is not a crash (delegates to locale -a)' {
+  # Without args it reads `locale -a`; just assert it returns 0 and is UTF-8 or empty.
+  result=$(-z4b-pick-utf8-locale)
+  assert $state equals 0
+  [[ -z "$result" || "$result" == (*UTF-8*|*utf8*) ]]
+  assert $state equals 0
+}
