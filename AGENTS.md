@@ -31,9 +31,11 @@ zunit tests/widgets.zunit    # one file
 
 Container smoke test (fresh install):
 ```sh
-podman build -t z4b-test -f Containerfile.test .
-podman run -it --rm z4b-test
+make container-test            # build image + run container-smoke.zsh
+podman run -it --rm z4b-test   # or drop in interactively
 ```
+Catches real-system defects the stub-based zunit suite can't (plugin symbol
+resolution, keybinding wiring, locale availability). See `docs/container-testing.md`.
 
 ## Constraints
 

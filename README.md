@@ -59,9 +59,20 @@ See `zshrc.template` for keybinding and option examples.
 Requires [zunit](https://github.com/zunit-zsh/zunit) and [revolver](https://github.com/zunit-zsh/revolver):
 
 ```sh
-zunit              # run all tests (137 across 10 files)
-zunit tests/widgets.zunit  # single file
+zunit                          # run all tests
+zunit tests/widgets.zunit      # single file
 ```
+
+The zunit suite is non-interactive with stubbed plugins, so it can't catch
+real-system integration bugs. For that, use the container smoke test:
+
+```sh
+make container-test            # build image + run container-smoke.zsh
+```
+
+See [`docs/container-testing.md`](docs/container-testing.md) for the full
+methodology, including interactive PTY checks for live highlighting, fzf
+history, and completion.
 
 ## Dependencies
 
