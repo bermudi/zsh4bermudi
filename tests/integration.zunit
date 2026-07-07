@@ -103,8 +103,15 @@
 
   rm -rf "$Z4B_ROOT/fzf"
 
+  # Shadow `command` so `command -v fzf` fails without stripping fzf's
+  # directory from PATH (it shares /usr/bin with mktemp, date, cat, …).
+  command() {
+    [[ "$1" == "-v" && "$2" == "fzf" ]] && return 1
+    builtin command "$@"
+  }
+
   local tmpout=$(mktemp)
-  Z4B_TEST_FZF_MISSING=1 Z4B_NO_TOOL_INSTALL=1 z4b init > "$tmpout" 2>&1
+  Z4B_NO_TOOL_INSTALL=1 z4b init > "$tmpout" 2>&1
   local output=$(cat "$tmpout")
   rm -f "$tmpout"
 
@@ -117,7 +124,14 @@
   unset _z4b_bootstrapped _z4b_initialized
   source "$Z4B_ROOT/z4b.zsh"
 
-  Z4B_TEST_FZF_MISSING=1 z4b init
+  # Shadow `command` so `command -v fzf` fails without stripping fzf's
+  # directory from PATH (it shares /usr/bin with mktemp, date, cat, …).
+  command() {
+    [[ "$1" == "-v" && "$2" == "fzf" ]] && return 1
+    builtin command "$@"
+  }
+
+  z4b init
 
   local found=0
   local p

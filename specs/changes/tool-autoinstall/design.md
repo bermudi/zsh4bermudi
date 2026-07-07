@@ -34,7 +34,7 @@ print one line to stderr and `return 1`; they never abort init.
 
 ```
 # fzf
-if [[ -n "$Z4B_TEST_FZF_MISSING" ]] || ! command -v fzf >/dev/null 2>&1; then
+if ! command -v fzf >/dev/null 2>&1; then
   [[ -z "$Z4B_NO_TOOL_INSTALL" && ! -x "$Z4B_ROOT/fzf/bin/fzf" ]] && -z4b-install-fzf
   path=("$Z4B_ROOT/fzf/bin" "$path[@]")
 fi
@@ -46,10 +46,10 @@ if ! command -v starship >/dev/null 2>&1; then
 fi
 ```
 
-- `Z4B_TEST_FZF_MISSING` is the existing test hook; in test mode it also implies
-  "don't really install" (covered by `Z4B_NO_TOOL_INSTALL` in the test support).
 - `Z4B_NO_TOOL_INSTALL` is the general offline flag — set in
-  `tests/_support/bootstrap` so the whole zunit suite runs offline.
+  `tests/_support/bootstrap` so the whole zunit suite runs offline. Tests that
+  need to simulate a missing fzf strip its directory from `path` rather than
+  relying on a production-side test hook.
 
 ## Startup impact
 

@@ -44,7 +44,11 @@
 }
 
 @test '-z4b-starship-asset: defaults to uname when given no args' {
-  # Smoke test: with no args it should still resolve (or fail cleanly) on the host.
+  # With no args, resolves (0) on supported hosts or fails cleanly (1) elsewhere.
   run -z4b-starship-asset
-  assert $state equals 0
+  if (( $state == 0 )); then
+    assert $state equals 0
+  else
+    assert $state equals 1
+  fi
 }

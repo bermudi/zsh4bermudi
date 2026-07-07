@@ -16,7 +16,8 @@ if ! _asset=$(-z4b-starship-asset); then
 fi
 
 local _url="https://github.com/starship/starship/releases/latest/download/${_asset}.tar.gz"
-local _tmp="$(mktemp -d)" || { print -u2 "z4b: starship: cannot create temp dir"; return 1; }
+local _tmp
+_tmp="$(mktemp -d)" || { print -u2 "z4b: starship: cannot create temp dir"; return 1; }
 
 print "z4b: installing starship..."
 if command -v curl >/dev/null 2>&1; then

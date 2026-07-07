@@ -92,7 +92,7 @@ z4b_init() {
 
   # fzf: install once if missing, then put it on PATH. Z4B_NO_TOOL_INSTALL
   # skips the network step (offline / sandboxed / test environments).
-  if [[ -n "$Z4B_TEST_FZF_MISSING" ]] || ! command -v fzf >/dev/null 2>&1; then
+  if ! command -v fzf >/dev/null 2>&1; then
     if [[ -z "$Z4B_NO_TOOL_INSTALL" && ! -x "$Z4B_ROOT/fzf/bin/fzf" ]]; then
       -z4b-install-fzf
     fi
