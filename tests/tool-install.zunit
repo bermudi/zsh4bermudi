@@ -1,0 +1,50 @@
+#!/usr/bin/env zunit
+
+# Tests for -z4b-starship-asset: the pure platform → release-asset mapping.
+# The helper takes [arch] [os] args (defaulting to uname), so these are fully
+# deterministic and host-independent.
+
+@setup {
+  fpath=("$Z4B_ROOT/fn" $fpath)
+  autoload -Uz -- -z4b-starship-asset
+}
+
+@test '-z4b-starship-asset: x86_64 linux' {
+  assert "$(-z4b-starship-asset x86_64 Linux)" same_as 'starship-x86_64-unknown-linux-gnu'
+}
+
+@test '-z4b-starship-asset: amd64 alias maps to x86_64' {
+  assert "$(-z4b-starship-asset amd64 Linux)" same_as 'starship-x86_64-unknown-linux-gnu'
+}
+
+@test '-z4b-starship-asset: aarch64 linux' {
+  assert "$(-z4b-starship-asset aarch64 Linux)" same_as 'starship-aarch64-unknown-linux-gnu'
+}
+
+@test '-z4b-starship-asset: arm64 maps to aarch64' {
+  assert "$(-z4b-starship-asset arm64 Linux)" same_as 'starship-aarch64-unknown-linux-gnu'
+}
+
+@test '-z4b-starship-asset: arm64 darwin' {
+  assert "$(-z4b-starship-asset arm64 Darwin)" same_as 'starship-aarch64-apple-darwin'
+}
+
+@test '-z4b-starship-asset: x86_64 darwin' {
+  assert "$(-z4b-starship-asset x86_64 Darwin)" same_as 'starship-x86_64-apple-darwin'
+}
+
+@test '-z4b-starship-asset: rejects unsupported arch' {
+  run -z4b-starship-asset mips Linux
+  assert $state equals 1
+}
+
+@test '-z4b-starship-asset: rejects unsupported OS' {
+  run -z4b-starship-asset x86_64 FreeBSD
+  assert $state equals 1
+}
+
+@test '-z4b-starship-asset: defaults to uname when given no args' {
+  # Smoke test: with no args it should still resolve (or fail cleanly) on the host.
+  run -z4b-starship-asset
+  assert $state equals 0
+}

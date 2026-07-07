@@ -1,0 +1,24 @@
+# -z4b-install-fzf
+#
+# Install fzf into $Z4B_ROOT/fzf via a shallow clone plus `install --bin`, which
+# places the prebuilt binary at $Z4B_ROOT/fzf/bin/fzf. The caller gates on
+# presence, so this runs at most once per install. Needs git + network. Prints
+# one progress line; on any failure prints a single stderr line and returns 1
+# (never aborts init).
+
+emulate -L zsh
+
+local _root="${Z4B_ROOT:-$HOME/.cache/zsh4bermudi}"
+local _dst="$_root/fzf"
+
+command -v git >/dev/null 2>&1 || { print -u2 "z4b: fzf: need git to install"; return 1; }
+
+print "z4b: installing fzf..."
+git clone --depth 1 https://github.com/junegunn/fzf "$_dst" >/dev/null 2>&1 \
+  || { print -u2 "z4b: fzf clone failed"; return 1; }
+"$_dst/install" --bin >/dev/null 2>&1 \
+  || { print -u2 "z4b: fzf install --bin failed"; return 1; }
+
+[[ -x "$_dst/bin/fzf" ]] || { print -u2 "z4b: fzf: binary missing after install"; return 1; }
+print "z4b: fzf installed"
+return 0

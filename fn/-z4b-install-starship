@@ -1,0 +1,36 @@
+# -z4b-install-starship
+#
+# Download and extract the starship binary into $Z4B_ROOT/bin. The caller gates
+# on presence, so this runs at most once per install. Needs curl or wget + tar
+# and network. Prints one progress line; on any failure prints a single stderr
+# line and returns 1 (never aborts init).
+
+emulate -L zsh
+
+local _root="${Z4B_ROOT:-$HOME/.cache/zsh4bermudi}"
+local _bindir="$_root/bin"
+local _asset
+
+if ! _asset=$(-z4b-starship-asset); then
+  return 1
+fi
+
+local _url="https://github.com/starship/starship/releases/latest/download/${_asset}.tar.gz"
+local _tmp="$(mktemp -d)" || { print -u2 "z4b: starship: cannot create temp dir"; return 1; }
+
+print "z4b: installing starship..."
+if command -v curl >/dev/null 2>&1; then
+  curl -fsSL "$_url" -o "$_tmp/starship.tar.gz" || { print -u2 "z4b: starship download failed"; rm -rf "$_tmp"; return 1; }
+elif command -v wget >/dev/null 2>&1; then
+  wget -q -O "$_tmp/starship.tar.gz" "$_url" || { print -u2 "z4b: starship download failed"; rm -rf "$_tmp"; return 1; }
+else
+  print -u2 "z4b: starship: need curl or wget to install"; rm -rf "$_tmp"; return 1
+fi
+
+command mkdir -p "$_bindir" 2>/dev/null || { print -u2 "z4b: starship: cannot create $_bindir"; rm -rf "$_tmp"; return 1; }
+tar -xzf "$_tmp/starship.tar.gz" -C "$_bindir" 2>/dev/null || { print -u2 "z4b: starship: extract failed"; rm -rf "$_tmp"; return 1; }
+rm -rf "$_tmp"
+
+[[ -x "$_bindir/starship" ]] || { print -u2 "z4b: starship: binary missing after extract"; return 1; }
+print "z4b: starship installed"
+return 0

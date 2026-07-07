@@ -4,3 +4,6 @@
 
 # Point Z4B_ROOT at the project root (where we're testing from)
 export Z4B_ROOT="${ZUNIT_TEST_ROOT:-${0:A:h:h:h}}"
+
+# Keep the suite offline: never let z4b init try to fetch fzf/starship.
+export Z4B_NO_TOOL_INSTALL=1

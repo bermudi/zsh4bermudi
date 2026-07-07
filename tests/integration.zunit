@@ -97,19 +97,20 @@
 
 # ── fzf binary installation stub ───────────────────────────────────────────
 
-@test 'z4b init stubs fzf installation when binary is missing' {
+@test 'z4b init stays silent when fzf is missing and installs are disabled' {
   unset _z4b_bootstrapped _z4b_initialized
   source "$Z4B_ROOT/z4b.zsh"
 
   rm -rf "$Z4B_ROOT/fzf"
 
   local tmpout=$(mktemp)
-  Z4B_TEST_FZF_MISSING=1 z4b init > "$tmpout" 2>&1
+  Z4B_TEST_FZF_MISSING=1 Z4B_NO_TOOL_INSTALL=1 z4b init > "$tmpout" 2>&1
   local output=$(cat "$tmpout")
   rm -f "$tmpout"
 
-  assert "$output" contains 'fzf installation stub'
-  assert "$output" contains 'installing fzf'
+  # No install attempt, no per-boot stub noise.
+  [[ "$output" != *"installing fzf"* ]]; assert $state equals 0
+  [[ "$output" != *"installation stub"* ]]; assert $state equals 0
 }
 
 @test 'z4b init adds fzf to path when binary is missing' {

@@ -1,0 +1,30 @@
+# -z4b-starship-asset
+#
+# Print the starship release asset name for a platform, e.g.
+# starship-x86_64-unknown-linux-gnu. Pure — no network, no side effects.
+#
+# Args: [arch] [os] — default to `uname -m` / `uname -s`. Tests pass explicit
+# values so they don't depend on the host.
+#
+# Returns 1 with a single stderr line on unsupported arch/OS.
+
+emulate -L zsh
+
+local _raw_arch="${1:-$(uname -m)}"
+local _raw_os="${2:-$(uname -s)}"
+
+local _arch
+case "$_raw_arch" in
+  x86_64|amd64)   _arch=x86_64  ;;
+  aarch64|arm64)  _arch=aarch64 ;;
+  *) print -u2 "z4b: starship: unsupported arch ($_raw_arch)"; return 1 ;;
+esac
+
+local _os
+case "$_raw_os" in
+  Linux)  _os=unknown-linux-gnu ;;
+  Darwin) _os=apple-darwin      ;;
+  *) print -u2 "z4b: starship: unsupported OS ($_raw_os)"; return 1 ;;
+esac
+
+print -rn -- "starship-${_arch}-${_os}"

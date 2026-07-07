@@ -7,5 +7,12 @@ tests/_output/
 # Cache
 cache/
 
+# Tool install targets (fzf/starship land here when Z4B_ROOT is the checkout)
+bin/
+fzf/
+
+# Plugin install artifacts (owner/repo style)
+owner/
+
 # Compiled zsh
 *.zwc

@@ -90,17 +90,13 @@ z4b_init() {
     fi
   done
 
-  # Install fzf binary automatically if missing
+  # fzf: install once if missing, then put it on PATH. Z4B_NO_TOOL_INSTALL
+  # skips the network step (offline / sandboxed / test environments).
   if [[ -n "$Z4B_TEST_FZF_MISSING" ]] || ! command -v fzf >/dev/null 2>&1; then
-    local _fzf_install_dir="$Z4B_ROOT/fzf"
-    if [[ ! -d "$_fzf_install_dir" ]]; then
-      print "z4b: installing fzf..."
-      mkdir -p "$_fzf_install_dir"
-      # Download fzf binary (simplified for this implementation)
-      # In a real implementation, this would download the appropriate binary for the OS/arch
-      print "z4b: fzf installation stub - please install fzf manually or via package manager"
+    if [[ -z "$Z4B_NO_TOOL_INSTALL" && ! -x "$Z4B_ROOT/fzf/bin/fzf" ]]; then
+      -z4b-install-fzf
     fi
-    path=("$_fzf_install_dir/bin" "$path[@]")
+    path=("$Z4B_ROOT/fzf/bin" "$path[@]")
   fi
 
   # Configure zsh-syntax-highlighting
@@ -146,17 +142,13 @@ z4b_init() {
     source "$Z4B_ROOT/fn/-z4b-compinit" || true
   fi
 
-  # Install starship binary during init if missing
+  # starship: install once if missing, then put it on PATH. Z4B_NO_TOOL_INSTALL
+  # skips the network step (offline / sandboxed / test environments).
   if ! command -v starship >/dev/null 2>&1; then
-    local _starship_install_dir="$Z4B_ROOT/bin"
-    if [[ ! -f "$_starship_install_dir/starship" ]]; then
-      print "z4b: installing starship..."
-      mkdir -p "$_starship_install_dir"
-      # Download starship binary (simplified for this implementation)
-      # In a real implementation, this would download the appropriate binary for the OS/arch
-      print "z4b: starship installation stub - please install starship manually or via package manager"
+    if [[ -z "$Z4B_NO_TOOL_INSTALL" && ! -x "$Z4B_ROOT/bin/starship" ]]; then
+      -z4b-install-starship
     fi
-    path=("$_starship_install_dir" "$path[@]")
+    path=("$Z4B_ROOT/bin" "$path[@]")
   fi
 
   # Initialize starship as the last step
