@@ -24,17 +24,21 @@
 
   local dump_dir="${XDG_CACHE_HOME:-$HOME/.cache}/zsh4bermudi"
   local dump_file="$dump_dir/zcompdump"
-  # DIAG (CI-only investigation): capture compinit's real behaviour.
-  print -r -- "DIAG HOME=$HOME XDG_CACHE_HOME=${XDG_CACHE_HOME:-<unset>} dump_dir=$dump_dir"
-  print -r -- "DIAG whoami=$(whoami) umask=$(umask)"
-  print -r -- "DIAG dump_dir exists=$([[ -d $dump_dir ]] && echo yes || echo no) writable=$([[ -w $dump_dir ]] && echo yes || echo no)"
-  print -r -- "DIAG files before: ${(qq)$(print -r $dump_dir/*(N) 2>/dev/null)}"
-  # Re-run compinit explicitly, WITHOUT stderr suppression, to see the real rc+msg.
   mkdir -p "$dump_dir"
+
+  # DIAG: non-blocking compinit probes (stdin from /dev/null) to capture the
+  # insecure-directory prompt that blocks/aborts on the runner.
   autoload -Uz compinit
-  compinit -d "$dump_file" 2>/tmp/ci-compinit.err; local rc=$?
-  print -r -- "DIAG compinit -d rc=$rc stderr=$(</tmp/ci-compinit.err)"
-  print -r -- "DIAG files after: ${(qq)$(print -r $dump_dir/*(N) 2>/dev/null)}"
+  compinit -d "$dump_file.plain" 2>/tmp/ci.err </dev/null; local rc1=$?
+  print -r -- "DIAG plain: rc=$rc1 stderr=[$(</tmp/ci.err)] file=$([[ -f $dump_file.plain ]] && echo YES || echo no)"
+
+  compinit -u -d "$dump_file.skip" 2>/tmp/ci2.err </dev/null; local rc2=$?
+  print -r -- "DIAG -u:     rc=$rc2 stderr=[$(</tmp/ci2.err)] file=$([[ -f $dump_file.skip ]] && echo YES || echo no)"
+
+  compinit -i -d "$dump_file.ign" 2>/tmp/ci3.err </dev/null; local rc3=$?
+  print -r -- "DIAG -i:     rc=$rc3 stderr=[$(</tmp/ci3.err)] file=$([[ -f $dump_file.ign ]] && echo YES || echo no)"
+
+  print -r -- "DIAG fpath: ${(qq)fpath}"
 
   [[ -f "$dump_file" ]]
   assert $state equals 0
