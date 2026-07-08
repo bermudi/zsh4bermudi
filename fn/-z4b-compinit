@@ -7,7 +7,11 @@ local dump_file="$dump_dir/zcompdump"
 mkdir -p "$dump_dir"
 
 autoload -Uz compinit
-compinit -d "$dump_file" 2>/dev/null || compinit 2>/dev/null || true
+# -u skips the insecure-directory check: a world/group-writable fpath entry
+# otherwise makes compinit prompt for confirmation, and in non-interactive
+# contexts (CI, subshells) it cannot open the tty and aborts *without writing
+# the dump*. z4b is single-user, so the check buys nothing and risks a hung init.
+compinit -u -d "$dump_file" 2>/dev/null || compinit -u 2>/dev/null || true
 
 # Wire up bash completions for installed tools
 autoload -Uz bashcompinit 2>/dev/null && bashcompinit 2>/dev/null || true

@@ -23,24 +23,7 @@
   assert $state equals 0
 
   local dump_dir="${XDG_CACHE_HOME:-$HOME/.cache}/zsh4bermudi"
-  local dump_file="$dump_dir/zcompdump"
-  mkdir -p "$dump_dir"
-
-  # DIAG: non-blocking compinit probes (stdin from /dev/null) to capture the
-  # insecure-directory prompt that blocks/aborts on the runner.
-  autoload -Uz compinit
-  compinit -d "$dump_file.plain" 2>/tmp/ci.err </dev/null; local rc1=$?
-  print -r -- "DIAG plain: rc=$rc1 stderr=[$(</tmp/ci.err)] file=$([[ -f $dump_file.plain ]] && echo YES || echo no)"
-
-  compinit -u -d "$dump_file.skip" 2>/tmp/ci2.err </dev/null; local rc2=$?
-  print -r -- "DIAG -u:     rc=$rc2 stderr=[$(</tmp/ci2.err)] file=$([[ -f $dump_file.skip ]] && echo YES || echo no)"
-
-  compinit -i -d "$dump_file.ign" 2>/tmp/ci3.err </dev/null; local rc3=$?
-  print -r -- "DIAG -i:     rc=$rc3 stderr=[$(</tmp/ci3.err)] file=$([[ -f $dump_file.ign ]] && echo YES || echo no)"
-
-  print -r -- "DIAG fpath: ${(qq)fpath}"
-
-  [[ -f "$dump_file" ]]
+  [[ -f "$dump_dir/zcompdump" ]]
   assert $state equals 0
 }
 
