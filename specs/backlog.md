@@ -1,6 +1,6 @@
 # Backlog
 
-Explicitly deferred from z4b initial implementation. These were evaluated during planning and deliberately excluded.
+Features deferred and tradeoffs accepted during z4b's initial implementation. Evaluated during planning; tracked here so the rationale survives.
 
 ## Deferred
 
@@ -8,7 +8,7 @@ Explicitly deferred from z4b initial implementation. These were evaluated during
 Screen save/restore, integrated/isolated tmux sessions, custom terminfo. Requires tmux as a runtime dependency and ~500 lines of escape code juggling. Revisit if tmux usage resumes.
 
 ### SSH Teleportation
-Package the entire shell environment and teleport it to a remote host over SSH. ~800 lines, requires tar-based bundling and remote bootstrap. The crown jewel of z4h but complex and rarely needed.
+Bundle the shell environment and ship it to a remote host over SSH. ~800 lines, tar-based bundling + remote bootstrap. z4h's largest feature; deferred for complexity and rare use.
 
 ### WSL Support
 Windows Subsystem for Linux detection and integration (`-z4h-init-wsl`, Windows path detection). Platform-specific.
@@ -37,4 +37,4 @@ z4h maps macOS Option key characters to their Alt equivalents. Platform-specific
 ## Security tradeoffs
 
 ### compinit Insecure-Directory Check (`-u`)
-`-z4b-compinit` runs `compinit -u`, skipping the insecure-directory security check. Default compinit prompts on world/group-writable `fpath` entries and, in non-interactive contexts (CI, subshells), cannot open the tty and aborts *without writing the dump* (`not interactive and can't open terminal`) — `|| true` then masked the failure, leaving no `zcompdump`. Tracked because `-u` also disables the protection against a trojaned group-writable completion dir. Revisit if that threat matters: scope `-u` to non-interactive/CI only, or audit `fpath` perms before init. See `44ac535`.
+`-z4b-compinit` runs `compinit -u`, skipping compinit's check for world/group-writable `fpath` entries. Default compinit prompts on those and, non-interactive, aborts without writing the dump — `|| true` masked the failure. `-u` also disables protection against a trojaned group-writable completion dir. Single-user, so acceptable; revisit if that threat matters (scope `-u` to non-interactive only, or audit `fpath` perms). See `44ac535`.
