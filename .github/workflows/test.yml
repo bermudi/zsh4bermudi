@@ -17,7 +17,7 @@ jobs:
           sudo apt-get install -y zsh git curl
       - name: Install zunit
         run: |
-          git clone https://github.com/zunit-framework/zunit.git /tmp/zunit
+          git clone https://github.com/zunit-zsh/zunit.git /tmp/zunit
           cd /tmp/zunit && ./build.zsh && sudo cp zunit /usr/local/bin/
       - name: Run zunit tests
         run: zunit
@@ -29,4 +29,4 @@ jobs:
       - name: Build container image
         run: docker build -t z4b-test -f Containerfile.test .
       - name: Run container smoke test
-        run: docker run --rm z4b-test -c 'echo "SMOKE_OK"'
+        run: docker run --rm z4b-test zsh /root/zsh4bermudi/container-smoke.zsh
