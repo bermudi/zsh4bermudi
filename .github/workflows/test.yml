@@ -15,6 +15,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y zsh git curl
+      - name: Install revolver (zunit runtime dependency)
+        run: |
+          git clone https://github.com/molovo/revolver.git /tmp/revolver
+          sudo install -m 755 /tmp/revolver/revolver /usr/local/bin/
       - name: Install zunit
         run: |
           git clone https://github.com/zunit-zsh/zunit.git /tmp/zunit
