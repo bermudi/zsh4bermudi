@@ -23,7 +23,20 @@
   assert $state equals 0
 
   local dump_dir="${XDG_CACHE_HOME:-$HOME/.cache}/zsh4bermudi"
-  [[ -f "$dump_dir/zcompdump" ]]
+  local dump_file="$dump_dir/zcompdump"
+  # DIAG (CI-only investigation): capture compinit's real behaviour.
+  print -r -- "DIAG HOME=$HOME XDG_CACHE_HOME=${XDG_CACHE_HOME:-<unset>} dump_dir=$dump_dir"
+  print -r -- "DIAG whoami=$(whoami) umask=$(umask)"
+  print -r -- "DIAG dump_dir exists=$([[ -d $dump_dir ]] && echo yes || echo no) writable=$([[ -w $dump_dir ]] && echo yes || echo no)"
+  print -r -- "DIAG files before: ${(qq)$(print -r $dump_dir/*(N) 2>/dev/null)}"
+  # Re-run compinit explicitly, WITHOUT stderr suppression, to see the real rc+msg.
+  mkdir -p "$dump_dir"
+  autoload -Uz compinit
+  compinit -d "$dump_file" 2>/tmp/ci-compinit.err; local rc=$?
+  print -r -- "DIAG compinit -d rc=$rc stderr=$(</tmp/ci-compinit.err)"
+  print -r -- "DIAG files after: ${(qq)$(print -r $dump_dir/*(N) 2>/dev/null)}"
+
+  [[ -f "$dump_file" ]]
   assert $state equals 0
 }
 
