@@ -33,3 +33,8 @@ z4h word widgets respect `$NUMERIC` (e.g., `2 Ctrl+Right` skips 2 words). Delibe
 
 ### macOS Option-as-Alt
 z4h maps macOS Option key characters to their Alt equivalents. Platform-specific, adds ~50 lines of character mapping.
+
+## Security tradeoffs
+
+### compinit Insecure-Directory Check (`-u`)
+`-z4b-compinit` runs `compinit -u`, skipping the insecure-directory security check. Default compinit prompts on world/group-writable `fpath` entries and, in non-interactive contexts (CI, subshells), cannot open the tty and aborts *without writing the dump* (`not interactive and can't open terminal`) — `|| true` then masked the failure, leaving no `zcompdump`. Tracked because `-u` also disables the protection against a trojaned group-writable completion dir. Revisit if that threat matters: scope `-u` to non-interactive/CI only, or audit `fpath` perms before init. See `44ac535`.
